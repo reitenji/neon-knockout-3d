@@ -56,9 +56,9 @@ function startDash(state: MatchState, player: MutableMatchPlayer): PulseBurstAct
   player.dashInvulnerabilityRemainingMs = fighter.dashInvulnerabilityMs;
   player.dashCooldownRemainingMs = fighter.dashCooldownMs;
   player.perfectDodgeConsumed = false;
-  return player.chassis === 'PULSE'
-    ? { playerId: player.playerId, activationId: state.nextAttackId++ }
-    : null;
+  if (player.chassis !== 'PULSE') return null;
+  player.protectionRemainingMs = 0;
+  return { playerId: player.playerId, activationId: state.nextAttackId++ };
 }
 
 function advanceDashTimers(player: MutableMatchPlayer, stepMs: number): void {

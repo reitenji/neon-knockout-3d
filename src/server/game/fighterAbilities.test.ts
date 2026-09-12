@@ -140,6 +140,38 @@ describe('distinct fighter abilities', () => {
     expect(state.players.pulse.stats.landedHits).toBe(1);
   });
 
+  it('cancels only the accepted offensive PULSE dash owner\'s spawn protection', () => {
+    const state = regulationState([
+      { playerId: 'pulse', name: 'Pulse', chassis: 'PULSE', accent: 0 },
+      { playerId: 'target', name: 'Target', chassis: 'BASTION', accent: 1 },
+      { playerId: 'rift', name: 'Rift', chassis: 'RIFT', accent: 2 }
+    ]);
+    state.players.pulse.position = { x: 640, y: 360 };
+    state.players.target.position = { x: 700, y: 360 };
+    state.players.rift.position = { x: 900, y: 360 };
+    state.players.pulse.protectionRemainingMs = 100;
+    state.players.rift.protectionRemainingMs = 100;
+
+    const events = stepMatch(state, new Map([
+      ['pulse', idle(0, { dash: true })],
+      ['rift', idle(0, { dash: true })]
+    ]), 0);
+
+    expect(events).toContainEqual(expect.objectContaining({
+      type: 'HIT', attackerId: 'pulse', targetId: 'target', attack: 'NEON_PULSE'
+    }));
+    expect(state.players.pulse.protectionRemainingMs).toBe(0);
+    expect(state.players.rift.protectionRemainingMs).toBe(100);
+
+    const blocked = regulationState([
+      { playerId: 'pulse', name: 'Pulse', chassis: 'PULSE', accent: 0 }
+    ]);
+    blocked.players.pulse.protectionRemainingMs = 100;
+    blocked.players.pulse.dashCooldownRemainingMs = 1;
+    stepMatch(blocked, new Map([['pulse', idle(0, { dash: true })]]), 0);
+    expect(blocked.players.pulse.protectionRemainingMs).toBe(100);
+  });
+
   it.each([
     ['RIFT', false, 302.4],
     ['PULSE', false, 302.4],
