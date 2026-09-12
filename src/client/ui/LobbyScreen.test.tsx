@@ -58,7 +58,7 @@ describe('LobbyScreen', () => {
 
   it('renders four meaningful chassis silhouette buttons and no grouped color columns', () => {
     renderLobby();
-    for (const chassis of ['RIFT', 'BASTION', 'PULSE', 'WRAITH']) {
+    for (const chassis of ['RIFT', 'BASTION', 'PULSE', 'WRAITH', 'EMBER', 'VOLT', 'TITAN', 'NOVA']) {
       const button = screen.getByRole('button', { name: `${chassis} gövdesini seç` });
       expect(button.querySelector('.chassis-silhouette')).not.toBeNull();
     }

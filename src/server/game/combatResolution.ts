@@ -139,7 +139,9 @@ function chargedValue(
 }
 
 function overloadMultiplier(overload: number): number {
-  return 1 + clamp(overload, 0, GAME.maxOverload) / 100;
+  const damage = clamp(overload, 0, GAME.maxOverload);
+  const danger = Math.max(0, damage - 100) / 150;
+  return 1 + damage / 100 + 4 * danger * danger;
 }
 
 function attackEffects(profile: AttackProfile, attack: AttackRuntime): Readonly<{
@@ -289,14 +291,22 @@ function applyHit(
   if (hitPlayerIds) hitPlayerIds.add(target.playerId);
   if (firstLandedTarget) attacker.stats.landedHits += 1;
   target.overload = Math.min(GAME.maxOverload, target.overload + overloadGain);
-  const knockbackMultiplier = target.chassis === 'BASTION' && target.dashRemainingMs > 0
-    ? FIGHTERS.BASTION.armoredDashKnockbackMultiplier
-    : FIGHTERS[target.chassis].knockbackMultiplier;
-  const impulse = baseImpulse * overloadMultiplier(target.overload) * knockbackMultiplier;
+  const fighter = FIGHTERS[target.chassis];
+  const knockbackMultiplier = target.dashRemainingMs > 0
+    ? fighter.armoredDashKnockbackMultiplier ?? fighter.knockbackMultiplier
+    : fighter.knockbackMultiplier;
+  const critical = target.overload >= GAME.maxOverload;
+  const impulse = Math.max(critical ? GAME.criticalImpulse : 0,
+    baseImpulse * overloadMultiplier(target.overload) * knockbackMultiplier);
+  // A successful critical hit breaks armor/dash; the next movement tick must keep the launch.
+  if (critical) {
+    target.dashRemainingMs = 0;
+    target.dashInvulnerabilityRemainingMs = 0;
+  }
   const direction = pulseDirection ?? normalize(attack?.lockedFacing ?? { x: 1, y: 0 }, { x: 1, y: 0 });
   target.velocity = {
-    x: target.velocity.x + direction.x * impulse,
-    y: target.velocity.y + direction.y * impulse
+    x: (critical ? 0 : target.velocity.x) + direction.x * impulse,
+    y: (critical ? 0 : target.velocity.y) + direction.y * impulse
   };
   target.hitstunRemainingMs = Math.max(target.hitstunRemainingMs, hitstunFor(impulse));
   target.lastAttackerId = attacker.playerId;
@@ -324,13 +334,14 @@ export function resolvePulseBurstActivations(
   for (const activation of [...activations].sort((left, right) =>
     left.activationId - right.activationId || compareStableIds(left.playerId, right.playerId))) {
     const attacker = state.players[activation.playerId];
-    if (!attacker || !activePlayer(attacker) || attacker.chassis !== 'PULSE') continue;
-    const fighter = FIGHTERS.PULSE;
+    if (!attacker || !activePlayer(attacker)) continue;
+    const { burstRadius, burstOverloadGain, burstBaseImpulse } = FIGHTERS[attacker.chassis];
+    if (burstRadius === undefined || burstOverloadGain === undefined || burstBaseImpulse === undefined) continue;
     let credited = false;
     const targets = Object.values(state.players)
       .filter((target) => target.playerId !== attacker.playerId && activePlayer(target) &&
         target.protectionRemainingMs <= 0 &&
-        Math.hypot(target.position.x - attacker.position.x, target.position.y - attacker.position.y) <= fighter.burstRadius)
+        Math.hypot(target.position.x - attacker.position.x, target.position.y - attacker.position.y) <= burstRadius)
       .sort((left, right) => compareStableIds(left.playerId, right.playerId));
 
     for (const target of targets) {
@@ -363,8 +374,8 @@ export function resolvePulseBurstActivations(
         null,
         impactPosition,
         direction,
-        fighter.burstOverloadGain,
-        fighter.burstBaseImpulse,
+        burstOverloadGain,
+        burstBaseImpulse,
         hits
       );
     }

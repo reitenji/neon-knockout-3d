@@ -57,3 +57,42 @@ it('shows a stable spawn shield until protection expires or a predicted strike c
   expect(shield?.visible).toBe(false);
   view.destroy();
 });
+
+it('distinguishes identical chassis by body color and strengthens damage glow without losing identity', () => {
+  const players = snapshotMatch(createMatchState([
+    { playerId: 'a', name: 'A', chassis: 'RIFT', accent: 0 },
+    { playerId: 'b', name: 'B', chassis: 'RIFT', accent: 1 }
+  ], 0, DEFAULT_ROOM_SETTINGS)).players;
+  const scene = new Scene();
+  const views = players.map(p => createFighterView(scene, new OrthographicCamera(), document.createElement('div'), p, false, false));
+  expect(views[0]!.model.armor.color.getHexString()).toBe('6ee7f2');
+  expect(views[1]!.model.armor.color.getHexString()).toBe('ff8a5b');
+  let now = 0;
+  vi.spyOn(performance, 'now').mockImplementation(() => now);
+  const view = views[0]!, player = players[0]!;
+  const apply = (overload: number) => view.apply({ ...player, overload }, player.position, player.facing, null);
+  apply(0); const base = view.model.glow.emissiveIntensity;
+  apply(125); const mid = view.model.glow.emissiveIntensity;
+  apply(250); const peak = view.model.glow.emissiveIntensity;
+  expect(base).toBeLessThan(mid); expect(mid).toBeLessThan(peak);
+  now = 250; apply(250);
+  expect(view.model.glow.emissiveIntensity).not.toBe(peak);
+  expect(view.model.armor.color.getHexString()).toBe('6ee7f2');
+  apply(0);
+  expect(view.model.glow.emissiveIntensity).toBe(base);
+  expect(view.model.armor.emissiveIntensity).toBe(0);
+  expect(scene.getObjectByName('damage-aura')?.visible).toBe(false);
+  views.forEach(v => v.destroy());
+  expect(scene.children).toHaveLength(0);
+});
+
+it('keeps critical damage highlighting static with reduced motion', () => {
+  const player = snapshotMatch(createMatchState([{ playerId: 'a', name: 'A', chassis: 'TITAN', accent: 2 }], 0, DEFAULT_ROOM_SETTINGS)).players[0]!;
+  let now = 0;
+  vi.spyOn(performance, 'now').mockImplementation(() => now);
+  const view = createFighterView(new Scene(), new OrthographicCamera(), document.createElement('div'), player, true, true);
+  const apply = () => view.apply({ ...player, overload: 250 }, player.position, player.facing, null);
+  apply(); const glow = view.model.glow.emissiveIntensity;
+  now = 250; apply(); expect(view.model.glow.emissiveIntensity).toBe(glow);
+  view.destroy();
+});

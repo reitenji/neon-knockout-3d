@@ -1,7 +1,7 @@
 import type { AttackProfileId } from './combat/profiles.js';
 import type { RoomSettings } from './roomSettings.js';
 
-export const CHASSIS = ['RIFT', 'BASTION', 'PULSE', 'WRAITH'] as const;
+export const CHASSIS = ['RIFT', 'BASTION', 'PULSE', 'WRAITH', 'EMBER', 'VOLT', 'TITAN', 'NOVA'] as const;
 
 export type Chassis = (typeof CHASSIS)[number];
 

@@ -257,7 +257,7 @@ describe('authoritative combat', () => {
     startActions(state);
     const events = advanceAndResolve(state, GAME.heavyWindupMs + GAME.heavyActiveMs);
     expect(events).toContainEqual(expect.objectContaining({
-      type: 'HIT', attack: 'HEAVY', impulse: 760 * 2.5, resultingOverload: 150
+      type: 'HIT', attack: 'HEAVY', impulse: 11000, resultingOverload: 250
     }));
     expect(state.players.p2.hitstunRemainingMs).toBe(230);
   });

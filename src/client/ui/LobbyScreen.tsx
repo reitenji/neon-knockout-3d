@@ -35,7 +35,11 @@ function ChassisSilhouette({ chassis }: Readonly<{ chassis: Chassis }>) {
     RIFT: 'M8 2h8l3 5-4 3 3 10H6l3-10-4-3z',
     BASTION: 'M4 4l5-2h6l5 2-2 7v9H6v-9z',
     PULSE: 'M12 2l8 6-5 2 3 10H6l3-10-5-2z',
-    WRAITH: 'M6 3l6-2 6 2 3 7-5 10H8L3 10zm6 4-3 4 3 4 3-4z'
+    WRAITH: 'M6 3l6-2 6 2 3 7-5 10H8L3 10zm6 4-3 4 3 4 3-4z',
+    EMBER: 'M4 1h3v6h10V1h3v12l-3 8H7l-3-8zm5 9v7h2v-7zm4 0v7h2v-7z',
+    VOLT: 'M14 1L5 12h6l-2 11 10-14h-6z',
+    TITAN: 'M7 2h10v4h5v11h-4v5H6v-5H2V6h5zm4 6v3H8v3h3v3h2v-3h3v-3h-3V8z',
+    NOVA: 'M12 1l4 7 7-3v14l-7-3-4 7-4-7-7 3V5l7 3z'
   }[chassis];
   return (
     <svg className="chassis-silhouette" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -125,7 +129,7 @@ export function LobbyScreen({
         </label>
 
         {!spectator ? <>
-        <CharacterPreview selected={selfPlayer?.chassis ?? 'RIFT'} />
+        <CharacterPreview selected={selfPlayer?.chassis ?? 'RIFT'} accent={selfPlayer?.accent ?? 0} />
 
         <fieldset className="chassis-picker" disabled={!selfPlayer || anyPending}>
           <legend>Gövdeni seç</legend>

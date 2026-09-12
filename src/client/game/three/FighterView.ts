@@ -22,18 +22,25 @@ export function createFighterView(
   const model = createFighterModel(player.chassis);
   scene.add(model.root);
   const accent = new THREE.Color(ACCENTS[player.accent]);
+  model.armor.color.copy(accent); model.armor.emissive.copy(accent);
+  model.glow.color.copy(accent); model.glow.emissive.copy(accent);
+  const floating = ['PULSE', 'WRAITH', 'NOVA'].includes(player.chassis);
+  const bulky = player.chassis === 'BASTION' || player.chassis === 'TITAN';
+  const burstRadius = FIGHTERS[player.chassis].burstRadius;
+  const aura = new THREE.Mesh(new THREE.RingGeometry(34, 39, 48), new THREE.MeshBasicMaterial({ color: accent, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+  aura.name = 'damage-aura'; aura.rotation.x = -Math.PI / 2; aura.visible = false; scene.add(aura);
   const marker = new THREE.Mesh(new THREE.RingGeometry(local ? 30 : 27, local ? 33 : 29, 40), new THREE.MeshBasicMaterial({ color: accent, transparent: true, opacity: local ? 0.95 : 0.6, depthWrite: false }));
   marker.rotation.x = -Math.PI / 2; scene.add(marker);
   const charge = new THREE.Mesh(new THREE.TorusGeometry(36, 1.5, 5, 48), new THREE.MeshBasicMaterial({ color: 0xf6d743, transparent: true, opacity: 0.85 }));
-  const ability = new THREE.Mesh(new THREE.RingGeometry(1, 1.04, 48), new THREE.MeshBasicMaterial({ color: FIGHTER_COLORS[player.chassis], transparent: true, opacity: 0.5, depthWrite: false }));
+  const ability = new THREE.Mesh(new THREE.RingGeometry(1, 1.04, 48), new THREE.MeshBasicMaterial({ color: accent, transparent: true, opacity: 0.5, depthWrite: false }));
   ability.rotation.x = -Math.PI / 2; ability.visible = false; scene.add(ability);
   charge.rotation.x = -Math.PI / 2; charge.visible = false; scene.add(charge);
-  const trail = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 1, 8), new THREE.MeshBasicMaterial({ color: FIGHTER_COLORS[player.chassis], transparent: true, opacity: 0.42, depthWrite: false }));
+  const trail = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 1, 8), new THREE.MeshBasicMaterial({ color: accent, transparent: true, opacity: 0.42, depthWrite: false }));
   scene.add(trail); trail.visible = false;
   const label = document.createElement('div');
   label.className = `fighter-label${local ? ' is-local' : ''}`;
   label.style.setProperty('--fighter-accent', ACCENTS[player.accent]);
-  const name = document.createElement('span'); name.textContent = player.name;
+  const name = document.createElement('span'); name.textContent = `${player.name}${local ? ' · Sen' : ''}`; name.style.color = ACCENTS[player.accent];
   const overload = document.createElement('b');
   label.append(name, overload); parent.append(label);
   const shield = new THREE.Mesh(new THREE.RingGeometry(36, 39, 48), new THREE.MeshBasicMaterial({ color: 0xdce8ed, transparent: true, opacity: 0.9, depthWrite: false }));
@@ -87,7 +94,7 @@ export function createFighterView(
       if (wasRespawning || next.hitstunRemainingMs > 0 || action.charging || action.kind !== null) returnStarted = null;
       let nextState: MotionState = Math.hypot(next.velocity.x, next.velocity.y) > 12 ? 'move' : 'idle';
       let attackTiming: ReturnType<typeof profileForAttack> | null = null;
-      let duration = nextState === 'move' ? player.chassis === 'BASTION' ? 650 : 440 : 1800;
+      let duration = nextState === 'move' ? bulky ? 650 : 440 : 1800;
       if (next.respawnRemainingMs > 0) { nextState = 'knockout'; duration = 260; }
       else if (next.hitstunRemainingMs > 0) { nextState = 'hit'; duration = 180; }
       else if (action.charging) { nextState = 'heavy-charge'; duration = GAME.heavyMaxChargeMs; }
@@ -122,7 +129,7 @@ export function createFighterView(
         const distance = Math.hypot(dx, dz);
         // Teleports/respawns do not wind up a walk cycle.
         if (distance > 0.001 && distance < 80) {
-          gaitPhase += distance / ((player.chassis === 'BASTION' ? 16 : 22) / 0.6);
+          gaitPhase += distance / ((bulky ? 16 : 22) / 0.6);
           gaitDirection = { x: (dx * Math.cos(yaw) - dz * Math.sin(yaw)) / distance, z: (dx * Math.sin(yaw) + dz * Math.cos(yaw)) / distance };
         }
       }
@@ -149,19 +156,28 @@ export function createFighterView(
       model.body.scale.setScalar(pose.scale);
       model.leftArm.rotation.set(pose.leftArm, 0, pose.leftSweep); model.rightArm.rotation.set(pose.rightArm, 0, pose.rightSweep);
       model.leftElbow.rotation.x = pose.elbow; model.rightElbow.rotation.x = pose.rightElbow;
-      if ((player.chassis === 'RIFT' || player.chassis === 'BASTION') && state !== 'knockout' && state !== 'respawn') {
-        placeGroundedFeet(model, gaitPhase, gaitWeight > 0, gaitDirection, player.chassis === 'BASTION', gaitWeight);
+      if (!floating && state !== 'knockout' && state !== 'respawn') {
+        placeGroundedFeet(model, gaitPhase, gaitWeight > 0, gaitDirection, bulky, gaitWeight);
       } else { model.leftLeg.rotation.x = pose.leg; model.rightLeg.rotation.x = -pose.leg; }
-      model.ornaments.rotation.y = player.chassis === 'PULSE' && !reducedMotion ? now * 0.0008 : 0;
+      model.ornaments.rotation.y = (player.chassis === 'PULSE' || player.chassis === 'NOVA') && !reducedMotion ? now * 0.0008 : 0;
       for (const material of model.materials) { material.transparent = pose.opacity < 1; material.opacity = pose.opacity; }
       ability.visible = state === 'dash';
       ability.position.copy(worldPoint(position, 4));
-      ability.scale.setScalar(player.chassis === 'PULSE' ? 35 + 90 * progress : player.chassis === 'BASTION' ? 35 : 30);
+      ability.scale.setScalar(burstRadius !== undefined ? 35 + (burstRadius - 35) * progress : bulky ? 35 : 30);
       ability.material.opacity = (1 - progress) * 0.6;
-      const offensiveAction = action.kind?.startsWith('QUICK') || (action.kind === 'HEAVY' && !action.charging) || (player.chassis === 'PULSE' && action.kind === 'DASH');
+      const offensiveAction = action.kind?.startsWith('QUICK') || (action.kind === 'HEAVY' && !action.charging) || (burstRadius !== undefined && action.kind === 'DASH');
       shield.visible = next.respawnRemainingMs <= 0 && next.protectionRemainingMs > 0 && !offensiveAction;
       shield.position.copy(worldPoint(position, 3));
-      model.glow.emissiveIntensity = action.charging ? 1.5 + progress * 1.6 : 1.4;
+      const damage = Math.max(0, Math.min(1, next.overload / GAME.maxOverload));
+      const pulse = reducedMotion ? 0.5 : 0.5 + 0.5 * Math.sin(now * 0.006 + player.accent * 0.7);
+      model.armor.emissiveIntensity = damage * (0.2 + damage * 0.5) + damage * damage * pulse * 0.45;
+      model.glow.emissiveIntensity = 1.4 + damage * 1.6 + damage * damage * pulse * 1.8 + (action.charging ? progress * 1.6 : 0);
+      aura.visible = damage > 0 && next.respawnRemainingMs <= 0;
+      aura.position.copy(worldPoint(position, 3));
+      aura.scale.setScalar(1 + damage * (0.15 + pulse * 0.3));
+      aura.material.opacity = damage * (0.15 + pulse * 0.4);
+      overload.style.color = damage >= 0.8 ? '#ffbe88' : ACCENTS[player.accent];
+      overload.style.textShadow = damage > 0 ? `0 0 ${3 + damage * 9}px ${ACCENTS[player.accent]}` : '';
       model.root.visible = pose.opacity > 0.02;
       marker.position.copy(worldPoint(position, 2));
       marker.visible = next.respawnRemainingMs <= 0;
@@ -183,7 +199,7 @@ export function createFighterView(
       label.style.opacity = String(Math.max(0, pose.opacity));
       overload.textContent = `${Math.round(next.overload)}%`;
     },
-    destroy(): void { if (disposed) return; disposed = true; label.remove(); model.dispose(); disposeObject(marker); disposeObject(charge); disposeObject(trail); disposeObject(ability); disposeObject(shield); }
+    destroy(): void { if (disposed) return; disposed = true; label.remove(); model.dispose(); disposeObject(marker); disposeObject(charge); disposeObject(trail); disposeObject(ability); disposeObject(shield); disposeObject(aura); }
   };
 }
 

@@ -68,8 +68,9 @@ export class BotController {
           } else input.quick = true;
         }
         if (self.dashCooldownRemainingMs <= 0 && !input.dash) {
-          const ability = self.chassis === 'PULSE' ? range < FIGHTERS.PULSE.burstRadius
-            : self.chassis === 'BASTION' ? range < 125 && telegraph
+          const fighter = FIGHTERS[self.chassis];
+          const ability = fighter.burstRadius !== undefined ? range < fighter.burstRadius
+            : fighter.armoredDashKnockbackMultiplier !== undefined ? range < 125 && telegraph
               : range > 180 && range < 310 && this.random() < 0.18;
           if (ability) input.dash = true;
         }

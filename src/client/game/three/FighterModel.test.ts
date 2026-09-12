@@ -14,6 +14,6 @@ describe('authored fighter models', () => {
       fighter.dispose();
       return signature;
     });
-    expect(new Set(sizes).size).toBe(4);
+    expect(new Set(sizes).size).toBe(8);
   });
 });

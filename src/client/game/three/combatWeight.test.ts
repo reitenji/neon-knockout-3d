@@ -13,9 +13,9 @@ const snapshot = () => snapshotMatch(createMatchState([
   { playerId: 'p2', name: 'Bastion', chassis: 'BASTION', accent: 1 }
 ], 0, DEFAULT_ROOM_SETTINGS));
 afterEach(() => vi.restoreAllMocks());
-it('authors four different full body strike silhouettes and stronger finishers', () => {
+it('authors eight different full body strike silhouettes and stronger finishers', () => {
   const poses = CHASSIS.map(chassis => fighterMotion(chassis, 'quick-1', 0.5, 0, false));
-  expect(new Set(poses.map(pose => JSON.stringify(pose))).size).toBe(4);
+  expect(new Set(poses.map(pose => JSON.stringify(pose))).size).toBe(8);
   for (const chassis of CHASSIS) {
     expect(fighterMotion(chassis, 'heavy-release', 0.5, 0, false)).not.toEqual(fighterMotion(chassis, 'quick-1', 0.5, 0, false));
   }

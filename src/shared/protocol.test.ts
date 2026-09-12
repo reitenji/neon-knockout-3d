@@ -140,7 +140,7 @@ describe('shared input boundary protocol', () => {
   });
 
   it('uses a strict chassis selection payload', () => {
-    expect(CHASSIS).toEqual(['RIFT', 'BASTION', 'PULSE', 'WRAITH']);
+    expect(CHASSIS).toEqual(['RIFT', 'BASTION', 'PULSE', 'WRAITH', 'EMBER', 'VOLT', 'TITAN', 'NOVA']);
     expect(protocol.lobbyChassisSchema.parse({ chassis: 'RIFT' })).toEqual({ chassis: 'RIFT' });
     expect(protocol.lobbyChassisSchema.safeParse({ chassis: 'RIFT', ignored: true }).success).toBe(false);
     expect(protocol.lobbyChassisSchema.safeParse({ chassis: 'MAGE' }).success).toBe(false);

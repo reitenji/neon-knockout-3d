@@ -13,8 +13,8 @@ const ease = (n: number) => 1 - Math.pow(1 - clamp(n), 3);
 export function fighterMotion(chassis: Chassis, state: MotionState, progress: number, speed: number, reducedMotion: boolean): FighterMotion {
   const t = clamp(progress);
   const wave = Math.sin(progress * Math.PI * 2);
-  const floating = chassis === 'PULSE' || chassis === 'WRAITH';
-  const bulky = chassis === 'BASTION';
+  const floating = chassis === 'PULSE' || chassis === 'WRAITH' || chassis === 'NOVA';
+  const bulky = chassis === 'BASTION' || chassis === 'TITAN';
   let bob = reducedMotion ? 0 : floating ? 3 + wave * 1.5 : -1.5;
   let lean = speed * (bulky ? 0.035 : 0.07);
   let twist = 0, roll = 0, shift = 0;
@@ -67,7 +67,7 @@ export function fighterMotion(chassis: Chassis, state: MotionState, progress: nu
       shift = -5 * drive * recovery * power;
       bob = 3 + 4 * drive * recovery * power;
       twist = second ? -0.16 * recovery : 0.16 * recovery;
-    } else {
+    } else if (chassis === 'WRAITH') {
       leftArm = (-0.65 * load - 0.6 * drive) * recovery;
       rightArm = second ? leftArm : -0.5;
       leftSweep = sign * (0.95 * load - 1.5 * drive) * recovery * power;
@@ -78,6 +78,29 @@ export function fighterMotion(chassis: Chassis, state: MotionState, progress: nu
       lean = 0.14 * drive * recovery;
       bob = 2 - 3 * load * recovery;
       shift = 3 * drive * recovery;
+    }
+    if (chassis === 'EMBER') {
+      leftArm = rightArm = (-0.9 * load - 0.7 * drive) * recovery;
+      elbow = rightElbow = (-1.5 * load + 1.35 * drive) * recovery;
+      lean = 0.26 * drive * recovery * power; shift = 6 * drive * recovery;
+      twist = sign * 0.28 * recovery; bob = -3 * load * recovery;
+    } else if (chassis === 'VOLT') {
+      leftArm = second ? -0.7 : -1.8 * drive * recovery;
+      rightArm = second ? -1.8 * drive * recovery : -0.7;
+      elbow = rightElbow = -0.4 * recovery;
+      lean = 0.3 * drive * recovery; twist = sign * -0.95 * drive * recovery;
+      roll = sign * 0.12 * recovery; shift = 8 * drive * recovery * power; bob = -2;
+    } else if (chassis === 'TITAN') {
+      leftArm = rightArm = (-2.6 * load + 1.2 * drive) * recovery;
+      elbow = rightElbow = -0.45 * recovery;
+      lean = (-0.15 * load + 0.3 * drive) * recovery * power;
+      bob = -5 * drive * recovery; shift = 2 * drive * recovery;
+    } else if (chassis === 'NOVA') {
+      leftArm = rightArm = -1.4 * drive * recovery;
+      leftSweep = -0.9 * load * recovery; rightSweep = 0.9 * load * recovery;
+      elbow = rightElbow = -0.7 * recovery;
+      twist = sign * 0.4 * drive * recovery; lean = -0.22 * drive * recovery;
+      bob = 5 + 3 * drive * recovery; shift = -3 * drive * recovery * power;
     }
     if (strong && chassis === 'RIFT') { leftArm -= 0.2 * recovery; rightArm = -1.5 * drive * recovery; }
   }

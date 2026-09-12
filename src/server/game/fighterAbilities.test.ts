@@ -66,7 +66,11 @@ describe('distinct fighter abilities', () => {
     ['RIFT', 160, 100, 1_300, 900],
     ['BASTION', 250, 0, 1_700, 420],
     ['PULSE', 140, 80, 1_800, 650],
-    ['WRAITH', 210, 190, 1_550, 780]
+    ['WRAITH', 210, 190, 1_550, 780],
+    ['EMBER', 150, 0, 1_900, 560],
+    ['VOLT', 100, 70, 950, 1_050],
+    ['TITAN', 350, 0, 2_000, 220],
+    ['NOVA', 160, 40, 2_100, 480]
   ] as const)(
     'starts the %s Space ability with its authoritative snapshot timers and matching prediction',
     (chassis, durationMs, invulnerabilityMs, cooldownMs, dashSpeed) => {
@@ -199,4 +203,29 @@ describe('distinct fighter abilities', () => {
     if (events[0]?.type === 'HIT') expect(events[0].impulse).toBeCloseTo(expectedImpulse, 10);
     expect(state.players.target.velocity.x).toBeCloseTo(expectedImpulse, 10);
   });
+});
+
+it.each([
+  ['EMBER', 90, 12, 330],
+  ['NOVA', 180, 6, 210]
+] as const)('%s bursts to its own radius and obeys spawn protection and held-input rules', (chassis, radius, damage, impulse) => {
+  const state = regulationState([
+    { playerId: 'caster', name: 'Caster', chassis, accent: 0 },
+    { playerId: 'edge', name: 'Edge', chassis: 'RIFT', accent: 1 },
+    { playerId: 'outside', name: 'Outside', chassis: 'RIFT', accent: 2 },
+    { playerId: 'protected', name: 'Protected', chassis: 'RIFT', accent: 3 }
+  ]);
+  state.players.caster.position = { x: 640, y: 360 };
+  state.players.edge.position = { x: 640 + radius, y: 360 };
+  state.players.outside.position = { x: 640 - radius - 1, y: 360 };
+  state.players.protected.position = { x: 640, y: 300 };
+  state.players.protected.protectionRemainingMs = 650;
+  const events = stepMatch(state, new Map([['caster', idle(0, { dash: true })]]), 0);
+  const hits = events.filter(e => e.type === 'HIT');
+  expect(hits).toHaveLength(1);
+  expect(hits[0]).toMatchObject({ targetId: 'edge', resultingOverload: damage });
+  expect(hits[0]!.impulse).toBeCloseTo(impulse * (1 + damage / 100));
+  expect(state.players.protected.overload).toBe(0);
+  expect(state.players.outside.overload).toBe(0);
+  expect(stepMatch(state, new Map([['caster', idle(1, { dash: true })]]), 0).filter(e => e.type === 'HIT')).toHaveLength(0);
 });

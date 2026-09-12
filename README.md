@@ -1,6 +1,6 @@
 # Neon Knockout 3D
 
-A standalone Three.js **2.5D LAN arena brawler**, derived from [Neon Knockout](https://github.com/reitenji/neon-knockout). The game uses an orthographic 3D camera and four original articulated robot models while combat remains on a flat, server-authoritative plane. Menus and controls are in Turkish. All art and audio ship locally; no Internet service is required during play.
+A standalone Three.js **2.5D LAN arena brawler**, derived from [Neon Knockout](https://github.com/reitenji/neon-knockout). The game uses an orthographic 3D camera and eight original articulated robot models while combat remains on a flat, server-authoritative plane. Menus and controls are in Turkish. All art and audio ship locally; no Internet service is required during play.
 
 ![Four playable fighters](artifacts/qa/lobby-desktop.png)
 
@@ -12,6 +12,12 @@ A standalone Three.js **2.5D LAN arena brawler**, derived from [Neon Knockout](h
 | BASTION | Broad armored brawler; planted steps and heavy gauntlets | Zırhlı İlerleyiş: armored advance, 1.7 s cooldown | Slower movement; 35% less normal knockback, 70% less during the advance |
 | PULSE | Floating reactor; orbital machinery and emitter arms | Radyal Darbe: 125-unit radial repulsion at dash start, 1.8 s cooldown | Shorter invulnerability window; burst obeys protection and hit-credit rules |
 | WRAITH | Hooded spectral machine; gliding motion and claws | Faz Geçişi: 190 ms phase protection, 1.55 s cooldown | Receives 12% more knockback when hit |
+| EMBER | Furnace robot with piston fists | Fırın Patlaması: 90-unit strong burst, 1.9 s cooldown | No invulnerability; short offensive dash |
+| VOLT | Lean sprinter with lightning crest | Şimşek Adımı: brief fast dash, 0.95 s cooldown | Fastest movement; receives 18% extra knockback |
+| TITAN | Riveted heavy tank and shield shoulders | Çelik Duruş: slow armored brace, 2 s cooldown | 45% less normal knockback; 78% less during brace |
+| NOVA | Floating satellite and solar vanes | Yıldız Dalgası: 180-unit weaker burst, 2.1 s cooldown | Wide spacing control; receives 5% extra knockback |
+
+Each fighter uses its player's unique room color on armor, core, name and ground marker, including when players choose the same chassis. Damage caps at **250%**, with brighter armor and a slow pulse as damage rises (static with reduced motion). Knockback increases steeply above 100%; any successful damaging hit that reaches 250% breaks an active armored dash and launches the target toward the edge. Invulnerability and spawn protection still prevent damage. Ringouts start immediately at the visible polygon edge, including while it contracts.
 
 Keyboard and touch use the same authoritative rules. Every accepted activation has a cooldown; holding Space does not repeat the ability. Incoming attacks can be dodged during the character's invulnerability window; BASTION instead resists knockback.
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { GAME } from '../../shared/constants.js';
 import { DEFAULT_ROOM_SETTINGS } from '../../shared/roomSettings.js';
-import type { Chassis, InputFrame, MatchSnapshot, RoomState } from '../../shared/model.js';
+import { CHASSIS, type Chassis, type InputFrame, type MatchSnapshot, type RoomState } from '../../shared/model.js';
 import { DomainError } from './domainError.js';
 import { RoomManager, type RoomManagerTestHarness, type RoomPublication } from './roomManager.js';
 
@@ -211,7 +211,7 @@ describe('RoomManager FFA lifecycle', () => {
     const state = subject.roomState(firstRoom.roomCode);
     expect(state.players.map((player) => player.accent)).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
     expect(state.players.map((player) => player.chassis)).toEqual([
-      'RIFT', 'BASTION', 'PULSE', 'WRAITH', 'RIFT', 'BASTION', 'PULSE', 'WRAITH'
+      'RIFT', 'BASTION', 'PULSE', 'WRAITH', 'EMBER', 'VOLT', 'TITAN', 'NOVA'
     ]);
 
     subject.manager.disconnect('first-3');
@@ -976,49 +976,49 @@ describe('RoomManager FFA lifecycle', () => {
       players: [
         {
           playerId: players[0].playerId,
-          position: { x: 1_144, y: 360 },
+          position: { x: 1050, y: 360 },
           facing: { x: 1, y: 0 },
           overload: 0
         },
         {
           playerId: players[1].playerId,
-          position: { x: 1_213, y: 360 },
+          position: { x: 1110, y: 360 },
           facing: { x: 1, y: 0 },
           overload: GAME.maxOverload
         },
         {
           playerId: players[2].playerId,
-          position: { x: 129, y: 360 },
+          position: { x: 230, y: 360 },
           facing: { x: -1, y: 0 },
           overload: 0
         },
         {
           playerId: players[3].playerId,
-          position: { x: 70, y: 360 },
+          position: { x: 170, y: 360 },
           facing: { x: -1, y: 0 },
           overload: GAME.maxOverload
         },
         {
           playerId: players[4].playerId,
-          position: { x: 640, y: 86 },
+          position: { x: 640, y: 180 },
           facing: { x: 0, y: -1 },
           overload: 0
         },
         {
           playerId: players[5].playerId,
-          position: { x: 640, y: 17 },
+          position: { x: 640, y: 120 },
           facing: { x: 0, y: -1 },
           overload: GAME.maxOverload
         },
         {
           playerId: players[6].playerId,
-          position: { x: 640, y: 641 },
+          position: { x: 640, y: 540 },
           facing: { x: 0, y: 1 },
           overload: 0
         },
         {
           playerId: players[7].playerId,
-          position: { x: 640, y: 700 },
+          position: { x: 640, y: 600 },
           facing: { x: 0, y: 1 },
           overload: GAME.maxOverload
         }
@@ -1116,7 +1116,7 @@ describe('bots and spectators', () => {
     const s = fixture();
     const host = s.manager.createRoom('host', 'Watcher');
     s.manager.setRole('host', 'SPECTATOR');
-    for (let i = 0; i < count; i++) s.manager.addBot('host', (['RIFT', 'BASTION', 'PULSE', 'WRAITH'] as const)[i % 4], 'NORMAL');
+    for (let i = 0; i < count; i++) s.manager.addBot('host', CHASSIS[i % CHASSIS.length]!, 'NORMAL');
     return { ...s, host, code: host.roomCode };
   }
 

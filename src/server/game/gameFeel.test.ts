@@ -61,7 +61,7 @@ describe('grounded combat feel', () => {
   });
 
   it('allows an inward edge recovery with Space and consumes the normal cooldown', () => {
-    const state = match(); state.players.a.position = { x: 1148, y: 360 };
+    const state = match(); state.players.a.position = { x: 1130, y: 360 };
     state.players.a.velocity = { x: 280, y: 0 };
     const events: GameEvent[] = [];
     for (let frame = 0; frame < 20; frame++) {
