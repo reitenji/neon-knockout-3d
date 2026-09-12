@@ -1049,20 +1049,28 @@ describe('Socket.IO FFA game server flow', () => {
     expect(pulseHit).toMatchObject({ attackerId: match.host.playerId, targetId: match.guest.playerId });
     expect(snapshot(match.roomCode).pulses).toEqual([]);
 
-    await prepare(match, { x: 580, y: 360 }, { x: 700, y: 360 });
+    await prepare(
+      match,
+      { x: 700, y: 360 },
+      { x: 580, y: 360 },
+      { x: -1, y: 0 },
+      { x: 1, y: 0 }
+    );
     marker = eventMarker(match.roomCode);
     await submitFrames(match, [
-      { client: match.hostClient, playerId: match.host.playerId, overrides: { aimX: 1, aimY: 0, quick: true } },
-      { client: match.guestClient, playerId: match.guest.playerId, overrides: { aimX: -1, aimY: 0, dash: true } }
+      { client: match.hostClient, playerId: match.host.playerId, overrides: { aimX: -1, aimY: 0, dash: true } }
     ]);
     await submitFrames(match, [
-      { client: match.hostClient, playerId: match.host.playerId, overrides: { aimX: 1, aimY: 0 } },
-      { client: match.guestClient, playerId: match.guest.playerId, overrides: { aimX: -1, aimY: 0 } }
+      { client: match.hostClient, playerId: match.host.playerId, overrides: { aimX: -1, aimY: 0 } }
+    ]);
+    harness().placePlayer(match.roomCode, match.host.playerId, { x: 700, y: 360 }, { x: -1, y: 0 });
+    await quick(match, [
+      { client: match.guestClient, playerId: match.guest.playerId, aim: { x: 1, y: 0 } }
     ]);
     const dodge = advanceToEvent(match, marker, 'PERFECT_DODGE', 400);
     expect(dodge).toMatchObject({
-      playerId: match.guest.playerId,
-      attackerId: match.host.playerId,
+      playerId: match.host.playerId,
+      attackerId: match.guest.playerId,
       source: 'QUICK_1',
       projectileId: null,
       refundedMs: GAME.perfectDodgeRefundMs

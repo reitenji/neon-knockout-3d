@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ARENA, GAME } from '../../shared/constants.js';
+import { FIGHTERS } from '../../shared/fighters.js';
 import { profileForAttack } from '../../shared/combat/profiles.js';
 import { DEFAULT_ROOM_SETTINGS } from '../../shared/roomSettings.js';
 import type { RoomSettings } from '../../shared/roomSettings.js';
@@ -164,7 +165,7 @@ describe('authoritative match simulation', () => {
 
     stepMatch(state, new Map([['p1', idle(5)]]), 0);
     stepMatch(state, new Map([['p1', idle(6, { dash: true })]]), 0);
-    expect(state.players.p1.dashRemainingMs).toBe(GAME.dashDurationMs);
+    expect(state.players.p1.dashRemainingMs).toBe(FIGHTERS.RIFT.dashDurationMs);
   });
 
   it('credits the last opponent inside four seconds and never credits a self-fall', () => {

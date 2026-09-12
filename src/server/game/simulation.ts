@@ -7,6 +7,7 @@ import { advanceCombatTimers, startActions } from './combat.js';
 import {
   buildActiveAttackShapes,
   resolveClashesAndPulseBreaks,
+  resolvePulseBurstActivations,
   resolveSurvivingContacts,
   type ActiveAttackSlice
 } from './combatResolution.js';
@@ -270,8 +271,9 @@ export function stepMatch(
   updateContraction(state);
   if (!activeAtStart) return events;
   startActions(state, stepMs);
-  advancePlayers(state, stepMs);
+  const pulseBurstActivations = advancePlayers(state, stepMs);
   separateActivePlayers(state);
+  events.push(...resolvePulseBurstActivations(state, pulseBurstActivations));
   spawnActivatedPulses(state, combatStep.activated, events);
   advancePulses(state, stepMs);
   const shapes = buildActiveAttackShapes(state, combatStep.activeSlices);

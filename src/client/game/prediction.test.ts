@@ -155,11 +155,11 @@ describe('PredictionBuffer', () => {
 
     prediction.predict(frame(0, { heavy: true }), canonical, 100);
     const dash = prediction.predict(frame(1, { heavy: true, dash: true }), canonical, 16);
-    const restartedCharge = prediction.predict(frame(2, { heavy: true }), canonical, 140);
+    const restartedCharge = prediction.predict(frame(2, { heavy: true }), canonical, 160);
 
     expect(dash.actionStart?.kind).toBe('DASH');
     expect(restartedCharge.actionStart).toEqual({
-      ...idleAction, kind: 'HEAVY', phase: 'WINDUP', chargeMs: 140, charging: true
+      ...idleAction, kind: 'HEAVY', phase: 'WINDUP', chargeMs: 160, charging: true
     });
   });
 
@@ -270,7 +270,7 @@ describe('PredictionBuffer', () => {
     const started = prediction.predict(frame(2, { dash: true }), coolingDown, 16);
 
     expect(started.actionStart).toEqual({ ...idleAction, kind: 'DASH', phase: 'ACTIVE' });
-    expect(started.velocity.x).toBe(760);
+    expect(started.velocity.x).toBe(900);
   });
 
   it('uses reduced steering and outward void pull when predicting outside the contracted platform', () => {

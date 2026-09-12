@@ -8,6 +8,7 @@ export type KinematicState = Readonly<{
 }>;
 
 export type KinematicOptions = Readonly<{
+  moveSpeed: number;
   dashVelocity: Vec2 | null;
   steeringScale: number;
   voidPull: Vec2;
@@ -56,8 +57,8 @@ export function advanceKinematics(
 
   if (hasGroundInput) {
     const target = {
-      x: movement.x * GAME.maxGroundSpeed,
-      y: movement.y * GAME.maxGroundSpeed
+      x: movement.x * options.moveSpeed,
+      y: movement.y * options.moveSpeed
     };
     velocity = accelerateTowards(
       velocity,
@@ -65,7 +66,7 @@ export function advanceKinematics(
       GAME.groundAcceleration * options.steeringScale * elapsedSeconds
     );
   } else {
-    const dragFactor = Math.exp((-GAME.groundDrag / GAME.maxGroundSpeed) * elapsedSeconds);
+    const dragFactor = Math.exp((-GAME.groundDrag / options.moveSpeed) * elapsedSeconds);
     velocity = { x: velocity.x * dragFactor, y: velocity.y * dragFactor };
   }
 

@@ -982,7 +982,7 @@ describe('RoomManager FFA lifecycle', () => {
         },
         {
           playerId: players[1].playerId,
-          position: { x: 1_198, y: 360 },
+          position: { x: 1_208, y: 360 },
           facing: { x: 1, y: 0 },
           overload: GAME.maxOverload
         },
@@ -1006,7 +1006,7 @@ describe('RoomManager FFA lifecycle', () => {
         },
         {
           playerId: players[5].playerId,
-          position: { x: 640, y: 32 },
+          position: { x: 640, y: 22 },
           facing: { x: 0, y: -1 },
           overload: GAME.maxOverload
         },

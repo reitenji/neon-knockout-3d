@@ -1,4 +1,5 @@
 import { ARENA, GAME } from '../../shared/constants.js';
+import { FIGHTERS } from '../../shared/fighters.js';
 import { advanceKinematics, normalizeAim, normalizeAxes, type KinematicState } from '../../shared/kinematics.js';
 import type { InputFrame, MatchAction, MatchPlayer, MatchSnapshot, Vec2 } from '../../shared/model.js';
 import { AdaptiveNetcodePolicy } from '../../shared/netcodePolicy.js';
@@ -198,6 +199,7 @@ function advanceRuntime(
   platformProgress: number
 ): Readonly<{ runtime: PredictionRuntime; actionStart: MatchAction | null }> {
   const elapsed = Math.max(0, elapsedMs);
+  const fighter = FIGHTERS[canonicalPlayer.chassis];
   if (runtime.action.kind === 'RESPAWNING' || runtime.respawnRemainingMs > 0) {
     return {
       runtime: { ...runtime, respawnRemainingMs: Math.max(0, runtime.respawnRemainingMs - elapsed) },
@@ -226,8 +228,8 @@ function advanceRuntime(
     heavyChargeMs = 0;
     if (dashCooldownRemainingMs <= 0) {
       dashDirectionValue = dashDirection(frame, runtime.facing);
-      dashRemainingMs = GAME.dashDurationMs;
-      dashCooldownRemainingMs = GAME.dashCooldownMs;
+      dashRemainingMs = fighter.dashDurationMs;
+      dashCooldownRemainingMs = fighter.dashCooldownMs;
       actionStart = { kind: 'DASH', phase: 'ACTIVE', comboStep: 0, chargeMs: 0, ...NEUTRAL_ACTION_METADATA };
       commitsAction = true;
     }
@@ -262,8 +264,9 @@ function advanceRuntime(
     ? { ...movementInput, aimX: heavyAim.x, aimY: heavyAim.y }
     : movementInput;
   const next = advanceKinematics(runtime, kinematicInput, elapsed, {
+    moveSpeed: fighter.moveSpeed,
     dashVelocity: dashRemainingMs > 0
-      ? { x: dashDirectionValue.x * GAME.dashSpeed, y: dashDirectionValue.y * GAME.dashSpeed }
+      ? { x: dashDirectionValue.x * fighter.dashSpeed, y: dashDirectionValue.y * fighter.dashSpeed }
       : null,
     steeringScale:
       (outsidePlatform ? GAME.voidRecoverySteerMultiplier : 1) *

@@ -14,7 +14,7 @@ function createState(): MatchState {
   const state = createMatchState([
     { playerId: 'p3', name: 'Grace', chassis: 'PULSE', accent: 2 },
     { playerId: 'p1', name: 'Ada', chassis: 'RIFT', accent: 0 },
-    { playerId: 'p2', name: 'Linus', chassis: 'BASTION', accent: 1 }
+    { playerId: 'p2', name: 'Linus', chassis: 'RIFT', accent: 1 }
   ], 7, DEFAULT_ROOM_SETTINGS);
   state.phase = 'REGULATION';
   state.players.p1.position = { x: 600, y: 360 };

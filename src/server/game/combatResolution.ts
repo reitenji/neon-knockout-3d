@@ -7,11 +7,13 @@ import {
 } from '../../shared/combat/geometry.js';
 import { profileForAttack, type AttackProfile } from '../../shared/combat/profiles.js';
 import { GAME } from '../../shared/constants.js';
+import { FIGHTERS } from '../../shared/fighters.js';
 import type { AttackKind, GameEvent } from '../../shared/model.js';
 import { clamp, normalize, subtract } from './geometry.js';
 import type { AttackRuntime, MatchState, MutableMatchPlayer } from './state.js';
 import { removePulse } from './projectiles.js';
 import type { CombatFrameHistory } from './CombatFrameHistory.js';
+import type { PulseBurstActivation } from './movement.js';
 
 export type ActiveAttackShape = Readonly<{
   playerId: string;
@@ -287,7 +289,10 @@ function applyHit(
   if (hitPlayerIds) hitPlayerIds.add(target.playerId);
   if (firstLandedTarget) attacker.stats.landedHits += 1;
   target.overload = Math.min(GAME.maxOverload, target.overload + overloadGain);
-  const impulse = baseImpulse * overloadMultiplier(target.overload);
+  const knockbackMultiplier = target.chassis === 'BASTION' && target.dashRemainingMs > 0
+    ? FIGHTERS.BASTION.armoredDashKnockbackMultiplier
+    : FIGHTERS[target.chassis].knockbackMultiplier;
+  const impulse = baseImpulse * overloadMultiplier(target.overload) * knockbackMultiplier;
   const direction = pulseDirection ?? normalize(attack?.lockedFacing ?? { x: 1, y: 0 }, { x: 1, y: 0 });
   target.velocity = {
     x: target.velocity.x + direction.x * impulse,
@@ -307,6 +312,68 @@ function applyHit(
     impulse,
     resultingOverload: target.overload
   });
+}
+
+export function resolvePulseBurstActivations(
+  state: MatchState,
+  activations: readonly PulseBurstActivation[]
+): readonly GameEvent[] {
+  const dodges: DodgeEventData[] = [];
+  const hits: HitEventData[] = [];
+
+  for (const activation of [...activations].sort((left, right) =>
+    left.activationId - right.activationId || compareStableIds(left.playerId, right.playerId))) {
+    const attacker = state.players[activation.playerId];
+    if (!attacker || !activePlayer(attacker) || attacker.chassis !== 'PULSE') continue;
+    const fighter = FIGHTERS.PULSE;
+    let credited = false;
+    const targets = Object.values(state.players)
+      .filter((target) => target.playerId !== attacker.playerId && activePlayer(target) &&
+        target.protectionRemainingMs <= 0 &&
+        Math.hypot(target.position.x - attacker.position.x, target.position.y - attacker.position.y) <= fighter.burstRadius)
+      .sort((left, right) => compareStableIds(left.playerId, right.playerId));
+
+    for (const target of targets) {
+      const direction = normalize(subtract(target.position, attacker.position), { x: 1, y: 0 });
+      const impactPosition = {
+        x: target.position.x - direction.x * GAME.collisionRadius,
+        y: target.position.y - direction.y * GAME.collisionRadius
+      };
+      if (target.dashInvulnerabilityRemainingMs > 0) {
+        applyPerfectDodge(target, {
+          type: 'PERFECT_DODGE',
+          playerId: target.playerId,
+          attackerId: attacker.playerId,
+          attackId: activation.activationId,
+          source: 'NEON_PULSE',
+          projectileId: null,
+          impactPosition: { ...target.position },
+          refundedMs: GAME.perfectDodgeRefundMs
+        }, dodges);
+        continue;
+      }
+      if (!credited) {
+        attacker.stats.landedHits += 1;
+        credited = true;
+      }
+      applyHit(
+        state,
+        attacker,
+        target,
+        null,
+        impactPosition,
+        direction,
+        fighter.burstOverloadGain,
+        fighter.burstBaseImpulse,
+        hits
+      );
+    }
+  }
+
+  return [
+    ...dodges.map((event) => ({ ...event, eventId: state.nextEventId++, tick: state.tick })),
+    ...hits.map((event) => ({ ...event, eventId: state.nextEventId++, tick: state.tick }))
+  ];
 }
 
 function pulseTravelParameter(

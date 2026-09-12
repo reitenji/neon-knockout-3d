@@ -21,7 +21,7 @@ import { CombatFrameHistory } from './CombatFrameHistory.js';
 function createState(): MatchState {
   const state = createMatchState([
     { playerId: 'p4', name: 'Katherine', chassis: 'WRAITH', accent: 3 },
-    { playerId: 'p2', name: 'Linus', chassis: 'BASTION', accent: 1 },
+    { playerId: 'p2', name: 'Linus', chassis: 'RIFT', accent: 1 },
     { playerId: 'p1', name: 'Ada', chassis: 'RIFT', accent: 0 },
     { playerId: 'p3', name: 'Grace', chassis: 'PULSE', accent: 2 }
   ], 7, DEFAULT_ROOM_SETTINGS);

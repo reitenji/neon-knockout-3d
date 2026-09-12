@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { ARENA, GAME } from '../../shared/constants.js';
+import { FIGHTERS } from '../../shared/fighters.js';
 import { DEFAULT_ROOM_SETTINGS } from '../../shared/roomSettings.js';
 import { advancePlayers, chooseSafestSpawn, separateActivePlayers } from './movement.js';
 import { createMatchState } from './state.js';
@@ -28,11 +29,11 @@ describe('authoritative movement', () => {
     expect(player.velocity.x).toBe(GAME.groundAcceleration / 10);
 
     advancePlayers(state, 1_000);
-    expect(player.velocity.x).toBe(GAME.maxGroundSpeed);
+    expect(player.velocity.x).toBe(FIGHTERS.RIFT.moveSpeed);
 
     player.latestInput = { ...player.latestInput, moveX: 0 };
     advancePlayers(state, 100);
-    expect(player.velocity.x).toBeLessThan(GAME.maxGroundSpeed);
+    expect(player.velocity.x).toBeLessThan(FIGHTERS.RIFT.moveSpeed);
     expect(player.velocity.x).toBeGreaterThan(0);
   });
 
@@ -56,21 +57,21 @@ describe('authoritative movement', () => {
 
     advancePlayers(state, 16);
 
-    expect(player.velocity).toEqual({ x: 0, y: -GAME.dashSpeed });
+    expect(player.velocity).toEqual({ x: 0, y: -FIGHTERS.RIFT.dashSpeed });
     expect(player.dashDirection).toEqual({ x: 0, y: -1 });
-    expect(player.dashRemainingMs).toBe(GAME.dashDurationMs);
-    expect(player.dashInvulnerabilityRemainingMs).toBe(GAME.dashInvulnerabilityMs);
-    expect(player.dashCooldownRemainingMs).toBe(GAME.dashCooldownMs);
+    expect(player.dashRemainingMs).toBe(FIGHTERS.RIFT.dashDurationMs);
+    expect(player.dashInvulnerabilityRemainingMs).toBe(FIGHTERS.RIFT.dashInvulnerabilityMs);
+    expect(player.dashCooldownRemainingMs).toBe(FIGHTERS.RIFT.dashCooldownMs);
   });
 
-  it('expires the active dash after its 140 ms duration', () => {
+  it('expires the RIFT rush after its 160 ms duration', () => {
     const state = createState();
     const player = state.players.p1;
     player.latestInput = { ...player.latestInput, moveX: 1, dash: true };
 
     advancePlayers(state, 16);
     player.latestInput = { ...player.latestInput, dash: false };
-    advancePlayers(state, GAME.dashDurationMs - 1);
+    advancePlayers(state, FIGHTERS.RIFT.dashDurationMs - 1);
     expect(player.dashRemainingMs).toBe(1);
 
     advancePlayers(state, 1);
@@ -84,27 +85,27 @@ describe('authoritative movement', () => {
 
     advancePlayers(state, 16);
     player.latestInput = { ...player.latestInput, dash: false };
-    advancePlayers(state, GAME.dashInvulnerabilityMs - 1);
+    advancePlayers(state, FIGHTERS.RIFT.dashInvulnerabilityMs - 1);
     expect(player.dashInvulnerabilityRemainingMs).toBe(1);
 
     advancePlayers(state, 1);
     expect(player.dashInvulnerabilityRemainingMs).toBe(0);
   });
 
-  it('expires cooldown after 1100 ms and permits a new dash', () => {
+  it('expires the RIFT cooldown after 1300 ms and permits a new rush', () => {
     const state = createState();
     const player = state.players.p1;
     player.latestInput = { ...player.latestInput, dash: true };
 
     advancePlayers(state, 16);
     player.latestInput = { ...player.latestInput, dash: false };
-    advancePlayers(state, GAME.dashCooldownMs);
+    advancePlayers(state, FIGHTERS.RIFT.dashCooldownMs);
     expect(player.dashCooldownRemainingMs).toBe(0);
 
     player.latestInput = { ...player.latestInput, dash: true };
     advancePlayers(state, 16);
-    expect(player.dashRemainingMs).toBe(GAME.dashDurationMs);
-    expect(player.dashInvulnerabilityRemainingMs).toBe(GAME.dashInvulnerabilityMs);
+    expect(player.dashRemainingMs).toBe(FIGHTERS.RIFT.dashDurationMs);
+    expect(player.dashInvulnerabilityRemainingMs).toBe(FIGHTERS.RIFT.dashInvulnerabilityMs);
   });
 
   it('resets perfect-dodge consumption only when a new legal dash begins', () => {
@@ -118,7 +119,7 @@ describe('authoritative movement', () => {
 
     player.perfectDodgeConsumed = true;
     player.latestInput = { ...player.latestInput, dash: false };
-    advancePlayers(state, GAME.dashCooldownMs);
+    advancePlayers(state, FIGHTERS.RIFT.dashCooldownMs);
     expect(player.perfectDodgeConsumed).toBe(true);
 
     player.latestInput = { ...player.latestInput, dash: true };

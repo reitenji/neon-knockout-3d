@@ -1,4 +1,5 @@
 import { GAME, ARENA } from '../../shared/constants.js';
+import { FIGHTERS } from '../../shared/fighters.js';
 import { advanceKinematics, normalizeAxes } from '../../shared/kinematics.js';
 import type { Vec2 } from '../../shared/model.js';
 import {
@@ -37,21 +38,27 @@ function dashDirection(player: MutableMatchPlayer): Vec2 {
   return movement;
 }
 
-function startDash(player: MutableMatchPlayer): void {
+export type PulseBurstActivation = Readonly<{ playerId: string; activationId: number }>;
+
+function startDash(state: MatchState, player: MutableMatchPlayer): PulseBurstActivation | null {
   if (
     !player.latestInput.dash ||
     player.previousDash ||
     player.dashRemainingMs > 0 ||
     player.dashCooldownRemainingMs > 0
   ) {
-    return;
+    return null;
   }
 
+  const fighter = FIGHTERS[player.chassis];
   player.dashDirection = dashDirection(player);
-  player.dashRemainingMs = GAME.dashDurationMs;
-  player.dashInvulnerabilityRemainingMs = GAME.dashInvulnerabilityMs;
-  player.dashCooldownRemainingMs = GAME.dashCooldownMs;
+  player.dashRemainingMs = fighter.dashDurationMs;
+  player.dashInvulnerabilityRemainingMs = fighter.dashInvulnerabilityMs;
+  player.dashCooldownRemainingMs = fighter.dashCooldownMs;
   player.perfectDodgeConsumed = false;
+  return player.chassis === 'PULSE'
+    ? { playerId: player.playerId, activationId: state.nextAttackId++ }
+    : null;
 }
 
 function advanceDashTimers(player: MutableMatchPlayer, stepMs: number): void {
@@ -61,16 +68,19 @@ function advanceDashTimers(player: MutableMatchPlayer, stepMs: number): void {
   player.dashCooldownRemainingMs = Math.max(0, player.dashCooldownRemainingMs - elapsedMs);
 }
 
-export function advancePlayers(state: MatchState, stepMs: number): void {
-  if (state.phase !== 'REGULATION' && state.phase !== 'SUDDEN_DEATH') return;
+export function advancePlayers(state: MatchState, stepMs: number): readonly PulseBurstActivation[] {
+  if (state.phase !== 'REGULATION' && state.phase !== 'SUDDEN_DEATH') return [];
 
   const platform = platformAt(state.contraction);
+  const pulseBurstActivations: PulseBurstActivation[] = [];
   for (const playerId of Object.keys(state.players).sort(compareStableIds)) {
     const player = state.players[playerId];
     if (!isActive(player)) continue;
 
     advanceDashTimers(player, stepMs);
-    startDash(player);
+    const pulseBurstActivation = startDash(state, player);
+    if (pulseBurstActivation) pulseBurstActivations.push(pulseBurstActivation);
+    const fighter = FIGHTERS[player.chassis];
     const outsidePlatform = !pointInConvexPolygon(player.position, platform.vertices);
     const currentDashDirection = player.dashDirection;
     const next = advanceKinematics(
@@ -80,8 +90,9 @@ export function advancePlayers(state: MatchState, stepMs: number): void {
         : player.latestInput,
       stepMs,
       {
+        moveSpeed: fighter.moveSpeed,
         dashVelocity:
-          player.dashRemainingMs > 0 ? scale(currentDashDirection, GAME.dashSpeed) : null,
+          player.dashRemainingMs > 0 ? scale(currentDashDirection, fighter.dashSpeed) : null,
         steeringScale:
           (outsidePlatform ? GAME.voidRecoverySteerMultiplier : 1) *
           (player.charging ? GAME.heavyChargeMoveMultiplier : 1),
@@ -95,6 +106,7 @@ export function advancePlayers(state: MatchState, stepMs: number): void {
     player.facing = next.facing;
     player.previousDash = player.latestInput.dash;
   }
+  return pulseBurstActivations;
 }
 
 export function separateActivePlayers(state: MatchState): void {

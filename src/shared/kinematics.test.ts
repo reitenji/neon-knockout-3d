@@ -18,7 +18,7 @@ describe('shared kinematics', () => {
       { position: { x: 0, y: 0 }, velocity: { x: 0, y: 0 }, facing: { x: 1, y: 0 } },
       { moveX: 1, moveY: 0, aimX: 0, aimY: 1 },
       100,
-      { dashVelocity: null, steeringScale: 1, voidPull: { x: 0, y: 0 } }
+      { moveSpeed: GAME.maxGroundSpeed, dashVelocity: null, steeringScale: 1, voidPull: { x: 0, y: 0 } }
     );
 
     expect(next.facing).toEqual({ x: 0, y: 1 });
@@ -31,7 +31,7 @@ describe('shared kinematics', () => {
       { position: { x: 0, y: 0 }, velocity: { x: 0, y: 0 }, facing: { x: 1, y: 0 } },
       { moveX: 0, moveY: 0, aimX: 0, aimY: 0 },
       100,
-      { dashVelocity: { x: GAME.dashSpeed, y: 0 }, steeringScale: 1, voidPull: { x: 0, y: GAME.voidPullAcceleration } }
+      { moveSpeed: GAME.maxGroundSpeed, dashVelocity: { x: GAME.dashSpeed, y: 0 }, steeringScale: 1, voidPull: { x: 0, y: GAME.voidPullAcceleration } }
     );
 
     expect(next.velocity).toEqual({ x: GAME.dashSpeed, y: GAME.voidPullAcceleration / 10 });
