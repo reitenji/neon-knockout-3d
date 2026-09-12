@@ -3,19 +3,27 @@ import { RoomManager, type RoomPublication } from '../../../server/rooms/roomMan
 import { DomainError } from '../../../server/rooms/domainError.js';
 import type { Ack, ServerError, SessionWelcome } from '../../../shared/model.js';
 import * as protocol from '../../../shared/protocol.js';
+import { RTT_SAMPLE_LIMIT } from '../../../shared/gameplayTransport.js';
 
 const payloads = {
   join: protocol.roomJoinSchema, resume: protocol.sessionResumeSchema,
   role: protocol.lobbyRoleSchema, addBot: protocol.lobbyBotAddSchema, updateBot: protocol.lobbyBotUpdateSchema,
   removeBot: protocol.lobbyBotRemoveSchema, chassis: protocol.lobbyChassisSchema, ready: protocol.lobbyReadySchema,
   settings: protocol.lobbySettingsSchema, start: protocol.matchStartSchema, input: protocol.matchInputSchema,
-  resultReady: protocol.resultReadySchema, lobby: protocol.resultLobbySchema, leave: protocol.roomLeaveSchema
+  resultReady: protocol.resultReadySchema, lobby: protocol.resultLobbySchema, leave: protocol.roomLeaveSchema,
+  pong: z.object({ nonce: z.number().int().positive() }).strict()
 } as const;
 export type HostCommand = keyof typeof payloads;
-export type HostEvent = { event: 'room:state' | 'match:started' | 'match:snapshot' | 'match:event' | 'server:error'; data: unknown };
+export type HostEvent = { event: 'room:state' | 'match:started' | 'match:snapshot' | 'match:event' | 'server:error' | 'network:probe'; data: unknown };
 export const LOCAL_HOST = 'local-host';
 export const requestSchema = z.object({ id: z.number().int().nonnegative(), command: z.enum(Object.keys(payloads) as [HostCommand, ...HostCommand[]]), payload: z.unknown() }).strict();
 const failure = (code: string, message: string): Ack<never> => ({ ok: false, error: { code, message, recoverable: true } });
+type PeerTiming = { pending: { nonce: number; sentAt: number } | null; nextAt: number; samples: number[] };
+function median(values: number[]): number {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b), middle = Math.floor(sorted.length / 2);
+  return Math.round(sorted.length % 2 ? sorted[middle]! : (sorted[middle - 1]! + sorted[middle]!) / 2);
+}
 
 /** The browser owner runs the same authoritative room rules as the Node LAN server. */
 export class HostRuntime {
@@ -23,6 +31,8 @@ export class HostRuntime {
   private members = new Set<string>();
   private latestRoom: Extract<RoomPublication, { type: 'ROOM_STATE' }> | null = null;
   private code: string | null = null;
+  private timings = new Map<string, PeerTiming>();
+  private probeNonce = 0;
 
   constructor(private readonly send: (connection: string, event: HostEvent) => void) {
     this.rooms = new RoomManager({ now: () => Date.now(), randomBytes: size => crypto.getRandomValues(new Uint8Array(size)), publish: event => this.publish(event) });
@@ -35,6 +45,7 @@ export class HostRuntime {
       if (!parsed.success) return failure('INVALID_PAYLOAD', 'Oyuncu adı geçersiz.');
       const welcome = this.rooms.createRoom(LOCAL_HOST, parsed.data.name);
       this.code = welcome.roomCode; this.members.add(LOCAL_HOST); this.sync(LOCAL_HOST);
+      this.rooms.setTransport(LOCAL_HOST, 'webrtc');
       return { ok: true, data: welcome };
     } catch (error) { return this.error(error); }
   }
@@ -51,6 +62,7 @@ export class HostRuntime {
           ? (() => { const p = protocol.roomJoinSchema.parse(payload); return this.rooms.joinRoom(connection, p.roomCode, p.name, p.role); })()
           : (() => { const p = protocol.sessionResumeSchema.parse(payload); return this.rooms.resume(connection, p.roomCode, p.resumeToken, 'webrtc'); })();
         this.members.add(connection); this.rooms.setTransport(connection, 'webrtc'); this.sync(connection);
+        this.timings.set(connection, { pending: null, nextAt: 0, samples: [] });
         return { ok: true, data: welcome };
       }
       switch (command) {
@@ -65,14 +77,41 @@ export class HostRuntime {
         case 'input': this.rooms.applyInput(connection, protocol.matchInputSchema.parse(payload)); break;
         case 'resultReady': this.rooms.setResultReady(connection, protocol.resultReadySchema.parse(payload).ready); break;
         case 'lobby': this.rooms.returnToLobby(connection); break;
-        case 'leave': this.rooms.leaveRoom(connection); this.members.delete(connection); break;
+        case 'leave': this.rooms.leaveRoom(connection); this.members.delete(connection); this.timings.delete(connection); break;
+        case 'pong': this.acceptPong(connection, payloads.pong.parse(payload).nonce); break;
       }
       return { ok: true, data: null };
     } catch (error) { return this.error(error); }
   }
 
-  disconnect(connection: string): void { this.rooms.disconnect(connection); this.members.delete(connection); }
-  advance(elapsed: number): void { this.rooms.advance(elapsed); }
+  disconnect(connection: string): void { this.rooms.disconnect(connection); this.members.delete(connection); this.timings.delete(connection); }
+  advance(elapsed: number): void {
+    // The owner executes locally, so there is no network round trip for this player.
+    if (this.members.has(LOCAL_HOST)) this.rooms.setWebRtcNetworkSample(LOCAL_HOST, 0, 0, Date.now());
+    const now = performance.now();
+    for (const [connection, timing] of this.timings) {
+      if (timing.pending && now - timing.pending.sentAt >= 2000) {
+        timing.pending = null; timing.samples = [];
+        this.rooms.clearWebRtcNetworkSample(connection);
+      }
+      if (timing.pending || now < timing.nextAt) continue;
+      const nonce = ++this.probeNonce;
+      timing.pending = { nonce, sentAt: now }; timing.nextAt = now + 1000;
+      this.send(connection, { event: 'network:probe', data: { nonce } });
+    }
+    this.rooms.advance(elapsed);
+  }
+  private acceptPong(connection: string, nonce: number): void {
+    const timing = this.timings.get(connection), probe = timing?.pending;
+    if (!timing || !probe || nonce !== probe.nonce) return;
+    const elapsed = performance.now() - probe.sentAt;
+    if (elapsed < 0 || elapsed >= 2000) return;
+    timing.pending = null;
+    timing.samples.push(elapsed);
+    if (timing.samples.length > RTT_SAMPLE_LIMIT) timing.samples.shift();
+    const differences = timing.samples.slice(1).map((value, index) => Math.abs(value - timing.samples[index]!));
+    this.rooms.setWebRtcNetworkSample(connection, median(timing.samples), median(differences), Date.now());
+  }
   private error(error: unknown): Ack<never> {
     return error instanceof DomainError ? { ok: false, error: { code: error.code, message: error.safeMessage, recoverable: error.recoverable } } : failure('INTERNAL_ERROR', 'Oda işlemi tamamlanamadı.');
   }

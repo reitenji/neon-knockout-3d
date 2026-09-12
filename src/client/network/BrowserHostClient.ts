@@ -19,6 +19,10 @@ export function createBrowserHostClient():GameClient {
   const emit=<E extends keyof GameClientEvents>(event:E,value:Parameters<GameClientEvents[E]>[0])=>{for(const listener of listeners.get(event)??[])listener(value as never);};
   const connection=(next:GameClientConnectionState)=>{state=next;emit('connection',next);};
   const receive=(event:HostEvent)=>{
+    if(event.event==='network:probe') {
+      if(guestChannel)sendPeer(guestChannel,{id:0,command:'pong',payload:event.data});
+      return;
+    }
     if(event.event==='match:snapshot') {
       const snapshot=event.data as MatchSnapshot;if(snapshot.tick<=lastSnapshot)return;lastSnapshot=snapshot.tick;
     }
@@ -61,7 +65,7 @@ export function createBrowserHostClient():GameClient {
           if(!parsed.success){channel.close();return;}
           const request=parsed.data;
           const ack=runtime?.handle(id,request.command,request.payload)??failed('Oda kapandı.');
-          if(request.command!=='input')sendPeer(channel,{id:request.id,ack});
+          if(request.command!=='input'&&request.command!=='pong')sendPeer(channel,{id:request.id,ack});
           if(request.command==='leave'&&ack.ok){channel.close();peer.close();peers.delete(id);}
         } catch {channel.close();}
       };
@@ -92,6 +96,7 @@ export function createBrowserHostClient():GameClient {
       try {
         const packet=JSON.parse(message.data) as {id?:number;ack?:Ack<SessionWelcome|null>;event?:HostEvent['event'];data?:unknown};
         if(packet.id!==undefined&&packet.ack){const request=pending.get(packet.id);if(request){window.clearTimeout(request.timer);pending.delete(packet.id);request.resolve(packet.ack);}}
+        else if(packet.event==='network:probe')receive({event:packet.event,data:packet.data});
         else if(packet.event&&['room:state','match:started','match:snapshot','match:event','server:error'].includes(packet.event)) {
           const event={event:packet.event,data:packet.data};
           if(joiningEvents) {if(joiningEvents.length<64)joiningEvents.push(event);} else receive(event);

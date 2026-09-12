@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { HostRuntime, LOCAL_HOST, type HostEvent } from './HostRuntime.js';
 
 function fixture() {
@@ -37,5 +37,64 @@ describe('browser host authority', () => {
     host.disconnect('old');
     expect(host.handle('new','resume',{roomCode:welcome.roomCode,resumeToken:'0'.repeat(64)})).toMatchObject({ok:false});
     expect(host.handle('new','resume',{roomCode:welcome.roomCode,resumeToken:joined.data.resumeToken})).toMatchObject({ok:true,data:{playerId:joined.data.playerId}});
+  });
+});
+
+
+describe('browser-host gameplay ping', () => {
+  afterEach(() => vi.useRealTimers());
+  function playing() {
+    vi.useFakeTimers({ toFake: ['Date', 'performance'] });
+    const subject = fixture();
+    const joined = subject.host.handle('peer', 'join', { roomCode: subject.welcome.roomCode, name: 'Guest' });
+    if (!joined.ok || !joined.data) throw new Error('join failed');
+    subject.host.handle(LOCAL_HOST, 'ready', { ready: true });
+    subject.host.handle('peer', 'ready', { ready: true });
+    subject.host.handle(LOCAL_HOST, 'start', {});
+    const network = () => subject.host.rooms.currentMatchPublication(LOCAL_HOST)!.snapshot.network;
+    const probe = () => subject.events.filter(e => e.connection === 'peer' && e.event.event === 'network:probe').at(-1)?.event.data as { nonce: number } | undefined;
+    return { ...subject, guestId: joined.data.playerId, network, probe };
+  }
+
+  it('publishes measured peer RTT to both clients and zero for the local host', () => {
+    const s = playing();
+    s.host.advance(17);
+    expect(s.probe()).toEqual({ nonce: expect.any(Number) });
+    vi.advanceTimersByTime(50);
+    s.host.handle('peer', 'pong', s.probe());
+    expect(s.network()[s.guestId]).toMatchObject({ medianMs: 50, jitterMs: 0 });
+    expect(s.network()[s.welcome.playerId]).toMatchObject({ medianMs: 0 });
+    vi.advanceTimersByTime(950);
+    s.host.advance(17);
+    vi.advanceTimersByTime(70);
+    s.host.handle('peer', 'pong', s.probe());
+    expect(s.network()[s.guestId]).toMatchObject({ medianMs: 60, jitterMs: 20 });
+    expect(s.host.rooms.currentMatchPublication('peer')!.snapshot.network).toEqual(s.network());
+  });
+
+  it('ignores forged, duplicate and expired replies and clears stale measurements', () => {
+    const s = playing();
+    s.host.advance(17);
+    const first = s.probe();
+    expect(first).toBeDefined();
+    s.host.handle('peer', 'pong', { nonce: 999 });
+    expect(s.network()[s.guestId]?.medianMs).toBeNull();
+    vi.advanceTimersByTime(40);
+    s.host.handle('peer', 'pong', first);
+    vi.advanceTimersByTime(20);
+    s.host.handle('peer', 'pong', first);
+    expect(s.network()[s.guestId]?.medianMs).toBe(40);
+    vi.advanceTimersByTime(940);
+    s.host.advance(17);
+    const expired = s.probe();
+    vi.advanceTimersByTime(2000);
+    s.host.handle('peer', 'pong', expired);
+    s.host.advance(17);
+    expect(s.network()[s.guestId]?.medianMs).toBeNull();
+    vi.advanceTimersByTime(25);
+    s.host.handle('peer', 'pong', s.probe());
+    expect(s.network()[s.guestId]?.medianMs).toBe(25);
+    s.host.disconnect('peer');
+    expect(s.host.handle('peer', 'pong', s.probe())).toMatchObject({ ok: false });
   });
 });
