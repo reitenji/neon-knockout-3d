@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { MatchSnapshot } from '../../shared/model.js';
 import type { GamePresentationBridge, NeonGameFactory } from './GamePresentationBridge.js';
-import { PhaserArena } from './PhaserArena.js';
+import { ThreeArena } from './ThreeArena.js';
 
 function bridge(): GamePresentationBridge & {
   snapshotListeners: Set<(snapshot: MatchSnapshot) => void>;
@@ -24,7 +24,7 @@ function bridge(): GamePresentationBridge & {
   };
 }
 
-describe('PhaserArena', () => {
+describe('ThreeArena', () => {
   afterEach(cleanup);
 
   it('creates one game for a stable mount and destroys it exactly once with removeCanvas=true', () => {
@@ -36,7 +36,7 @@ describe('PhaserArena', () => {
       const unsubscribe = receivedBridge.subscribeSnapshot(() => undefined);
       return { destroy(removeCanvas?: boolean) { unsubscribe(); destroy(removeCanvas); } };
     });
-    const view = render(<PhaserArena bridge={presentation} localPlayerId="p-local" createGame={factory} reducedMotion />);
+    const view = render(<ThreeArena bridge={presentation} localPlayerId="p-local" createGame={factory} reducedMotion />);
 
     expect(factory).toHaveBeenCalledOnce();
     expect(touchInput).toBeDefined();
@@ -45,7 +45,7 @@ describe('PhaserArena', () => {
     expect(screen.getByRole('complementary', { name: 'Maç bilgileri' })).toBeVisible();
     expect(presentation.snapshotListeners).toHaveLength(2);
     expect(presentation.connectionListeners).toHaveLength(1);
-    view.rerender(<PhaserArena bridge={presentation} localPlayerId="p-local" createGame={factory} reducedMotion />);
+    view.rerender(<ThreeArena bridge={presentation} localPlayerId="p-local" createGame={factory} reducedMotion />);
     expect(factory).toHaveBeenCalledOnce();
     expect(presentation.snapshotListeners).toHaveLength(2);
     expect(presentation.connectionListeners).toHaveLength(1);
@@ -58,7 +58,7 @@ describe('PhaserArena', () => {
   });
 
   it('suppresses the context menu inside the arena without changing the rest of the document', () => {
-    render(<PhaserArena bridge={bridge()} localPlayerId="p-local" createGame={() => ({ destroy() {} })} />);
+    render(<ThreeArena bridge={bridge()} localPlayerId="p-local" createGame={() => ({ destroy() {} })} />);
     const arena = screen.getByLabelText('Neon Knockout oyun alanı');
     const outside = document.createElement('button');
     document.body.append(outside);

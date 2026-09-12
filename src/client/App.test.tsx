@@ -129,7 +129,7 @@ describe('App', () => {
     setViewport(390, 844);
     render(<App store={storeFor(landing)} />);
 
-    expect(screen.getByRole('heading', { name: 'NEON KNOCKOUT' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'NEON KNOCKOUT 3D' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Oda Kur' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Odaya Katıl' })).toBeVisible();
     expect(screen.queryByRole('dialog', { name: 'Telefonu yatay çevir' })).toBeNull();
@@ -168,7 +168,7 @@ describe('App', () => {
     const view = render(<App store={store} />);
 
     expect(store.actions.connect).toHaveBeenCalledOnce();
-    expect(screen.getByRole('heading', { name: 'NEON KNOCKOUT' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'NEON KNOCKOUT 3D' })).toBeVisible();
     expect(screen.getByText('Bağlı')).toBeVisible();
 
     view.unmount();

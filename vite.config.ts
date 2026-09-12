@@ -6,9 +6,9 @@ export default defineConfig({
   build: { outDir: 'dist/client', emptyOutDir: false },
   server: {
     proxy: {
-      '/socket.io': { target: 'http://127.0.0.1:4174', ws: true },
-      '/health': { target: 'http://127.0.0.1:4174' },
-      '/api': { target: 'http://127.0.0.1:4174' }
+      '/socket.io': { target: 'http://127.0.0.1:4175', ws: true },
+      '/health': { target: 'http://127.0.0.1:4175' },
+      '/api': { target: 'http://127.0.0.1:4175' }
     }
   }
 });

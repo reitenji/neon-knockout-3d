@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
-import type { TouchInputSource } from '../game/phaser/TouchInputSource.js';
+import type { TouchInputSource } from '../game/runtime/TouchInputSource.js';
 
 const STICK_TRAVEL = 30;
 
@@ -10,7 +10,7 @@ function knobStyle(stick: Readonly<{ x: number; y: number }>): CSSProperties {
   } as CSSProperties;
 }
 
-type TouchControlsProps = Readonly<{ source: TouchInputSource }>;
+type TouchControlsProps = Readonly<{ source: TouchInputSource; abilityName?: string }>;
 type Action = 'quick' | 'heavy' | 'dash';
 
 function setActionHeld(source: TouchInputSource, action: Action, held: boolean): void {
@@ -52,7 +52,7 @@ function prefersTouchControls(): boolean {
   return (window.matchMedia?.('(pointer: coarse)').matches ?? false) || navigator.maxTouchPoints > 0;
 }
 
-export function TouchControls({ source }: TouchControlsProps) {
+export function TouchControls({ source, abilityName = 'Dash' }: TouchControlsProps) {
   const enabled = prefersTouchControls();
   const [stick, setStick] = useState({ x: 0, y: 0 });
   const [active, setActive] = useState<Record<Action, boolean>>({ quick: false, heavy: false, dash: false });
@@ -154,7 +154,7 @@ export function TouchControls({ source }: TouchControlsProps) {
           {...actionHandlers(source, 'dash', updateActive)}
         >
           <strong>Space</strong>
-          <span>Dash</span>
+          <span>{abilityName}</span>
         </button>
       </div>
     </section>

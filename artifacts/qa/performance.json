@@ -1,0 +1,40 @@
+{
+  "physicalLanClaim": false,
+  "date": "2026-09-12",
+  "results": [
+    {
+      "type": "eight-player-scene",
+      "browserContexts": 1,
+      "authoritativePlayers": 8,
+      "loadGameplayTransport": "webrtc",
+      "socketIoCompanions": 7,
+      "viewport": "1280x720",
+      "samples": 180,
+      "medianFrameMs": 8.3,
+      "medianFps": 120.48,
+      "p95FrameMs": 10,
+      "inputLatency": {
+        "webRtc": {
+          "samples": 60,
+          "medianMs": 8,
+          "p95Ms": 18.7
+        },
+        "socketIo": {
+          "samples": 60,
+          "medianMs": 6.5,
+          "p95Ms": 22
+        }
+      }
+    },
+    {
+      "type": "simultaneous-knockouts",
+      "browserContexts": 1,
+      "authoritativePlayers": 8,
+      "simultaneousHits": 4,
+      "sameTickRingOuts": 4,
+      "correlatedMaxFrameMs": 10.3,
+      "globalP95FrameMs": 10.2,
+      "globalMedianFps": 120.48
+    }
+  ]
+}

@@ -1,6 +1,5 @@
-import type Phaser from 'phaser';
 import type { GameEvent, InputFrame, MatchSnapshot } from '../../shared/model.js';
-import type { ArenaInputSource } from './phaser/ArenaInput.js';
+import type { ArenaInputSource } from './runtime/ArenaInput.js';
 import type { ReconciliationResult } from './prediction.js';
 
 export interface GamePresentationBridge {
@@ -28,7 +27,7 @@ export type NeonGameFactory = (
   parent: HTMLElement,
   bridge: GamePresentationBridge,
   options?: Readonly<{ reducedMotion?: boolean }>
-) => Pick<Phaser.Game, 'destroy'>;
+) => { destroy(removeCanvas?: boolean): void };
 
 const LOCAL_PLAYER_ID = Symbol('localPlayerId');
 

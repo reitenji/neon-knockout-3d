@@ -46,7 +46,7 @@ test('the shipped browser client falls back to polling when WebSocket is unavail
     expect(pollingRequests.length).toBeGreaterThan(0);
 
     await page.getByRole('button', { name: 'Odadan Çık' }).click();
-    await expect(page.getByRole('heading', { name: 'NEON KNOCKOUT' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'NEON KNOCKOUT 3D' })).toBeVisible();
     await assertNoUnexpectedErrors(game, { context, page, issues });
   } finally {
     await context.close();

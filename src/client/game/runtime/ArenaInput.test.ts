@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ArenaInput, createPhaserInputSource, type ArenaInputSource } from './ArenaInput.js';
+import { ArenaInput, type ArenaInputSource } from './ArenaInput.js';
 
 type Directions = 'up' | 'down' | 'left' | 'right';
 
@@ -135,7 +135,7 @@ describe('ArenaInput', () => {
     expect(shutdownListeners).toHaveLength(0);
   });
 
-  it('waits for raw keyup when Phaser resets an isDown flag during blur', () => {
+  it('waits for raw keyup when an input source resets a held flag during blur', () => {
     const controls = source();
     const windowTarget = eventTarget();
     const documentTarget = eventTarget() as EventTarget & { visibilityState: DocumentVisibilityState };
@@ -207,45 +207,4 @@ describe('ArenaInput', () => {
     input.dispose();
   });
 
-  it('captures only WASD, J, K, and Space while arrows and both Shift keys remain inert and uncaptured', () => {
-    const keys = Object.fromEntries(['w', 'a', 's', 'd', 'quick', 'heavy', 'dash'].map((key) => [key, { isDown: false }]));
-    const captures = [65];
-    const keyboard = {
-      manager: {}, addKeys: vi.fn(() => keys), resetKeys: vi.fn(), getCaptures: vi.fn(() => [...captures]),
-      addCapture: vi.fn((codes: number[]) => captures.push(...codes.filter((code) => !captures.includes(code)))),
-      removeCapture: vi.fn((codes: number[]) => { for (const code of codes) captures.splice(captures.indexOf(code), 1); })
-    };
-    const events = { on: vi.fn(), off: vi.fn() };
-    const controls = createPhaserInputSource({ input: { keyboard }, events } as never);
-    keys.w.isDown = true;
-    keys.quick.isDown = true;
-    expect(controls.movement()).toMatchObject({ up: true, right: false });
-    expect(controls.attack()).toEqual({ quick: true, heavy: false });
-    expect(keyboard.addKeys).toHaveBeenCalledWith({ w: 'W', a: 'A', s: 'S', d: 'D', quick: 'J', heavy: 'K', dash: 'SPACE' });
-    expect(keyboard.addCapture).toHaveBeenCalledWith([87, 83, 68, 74, 75, 32]);
-    const input = new ArenaInput(controls);
-    expect(events.on).toHaveBeenCalledTimes(2);
-    expect(events.on).toHaveBeenCalledWith('pause', expect.any(Function));
-    expect(events.on).toHaveBeenCalledWith('sleep', expect.any(Function));
-    input.dispose();
-    expect(keyboard.removeCapture).toHaveBeenCalledWith([87, 83, 68, 74, 75, 32]);
-    expect(events.off).toHaveBeenCalledTimes(2);
-    expect(events.off).toHaveBeenCalledWith('pause', expect.any(Function));
-    expect(events.off).toHaveBeenCalledWith('sleep', expect.any(Function));
-    expect(captures).toEqual([65]);
-  });
-
-  it('keeps shared captures leased until the last source disposes', () => {
-    const keys = Object.fromEntries(['w', 'a', 's', 'd', 'quick', 'heavy', 'dash'].map((key) => [key, { isDown: false }]));
-    const captures: number[] = [];
-    const keyboard = { manager: {}, addKeys: vi.fn(() => keys), getCaptures: () => [...captures], addCapture: vi.fn((codes: number[]) => captures.push(...codes)), removeCapture: vi.fn((codes: number[]) => { for (const code of codes) captures.splice(captures.indexOf(code), 1); }) };
-    const first = createPhaserInputSource({ input: { keyboard }, events: { on: vi.fn(), off: vi.fn() } } as never);
-    const second = createPhaserInputSource({ input: { keyboard }, events: { on: vi.fn(), off: vi.fn() } } as never);
-    first.dispose?.();
-    expect(captures).toHaveLength(7);
-    expect(keyboard.removeCapture).not.toHaveBeenCalled();
-    second.dispose?.();
-    expect(captures).toEqual([]);
-    expect(keyboard.removeCapture).toHaveBeenCalledOnce();
-  });
 });

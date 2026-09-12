@@ -8,8 +8,8 @@ import {
 } from '../../../shared/gameplayTransport.js';
 import type { PeerSendResult, ServerPeer, ServerPeerFactory } from './ServerPeer.js';
 
-const DEFAULT_UDP_PORT_MIN = 53100;
-const DEFAULT_UDP_PORT_MAX = 53131;
+const DEFAULT_UDP_PORT_MIN = 53140;
+const DEFAULT_UDP_PORT_MAX = 53171;
 
 type Environment = Readonly<Record<string, string | undefined>>;
 type MessageListener = (serialized: string) => void;

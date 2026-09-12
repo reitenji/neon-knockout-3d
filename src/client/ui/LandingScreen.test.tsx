@@ -117,7 +117,7 @@ describe('LandingScreen', () => {
       <LandingScreen state={landingState} onCreateRoom={async () => undefined} onJoinRoom={async () => undefined} />
     );
 
-    expect(screen.getByRole('heading', { name: 'NEON KNOCKOUT' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'NEON KNOCKOUT 3D' })).toBeVisible();
     expect(screen.getByLabelText('Oyuncu adı')).toHaveClass('focus-ring');
     expect(screen.getByLabelText('Oda kodu')).toHaveClass('focus-ring');
     expect(screen.getByRole('button', { name: 'Oda Kur' })).toHaveClass('focus-ring');

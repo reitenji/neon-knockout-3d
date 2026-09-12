@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import type { NeonGameFactory } from './game/GamePresentationBridge.js';
-import { PhaserArena } from './game/PhaserArena.js';
+import { ThreeArena } from './game/ThreeArena.js';
 import {
   INVITE_DISMISSED_HISTORY_STATE,
   inviteRoomCodeFromPath,
@@ -102,7 +102,7 @@ export function App({ store, gameFactory }: AppProps) {
 
         {state.screen === 'MATCH' ? (
           <>
-            <PhaserArena
+            <ThreeArena
               bridge={arenaBridge}
               localPlayerId={state.session?.playerId ?? ''}
               createGame={gameFactory}

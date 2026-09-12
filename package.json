@@ -1,5 +1,5 @@
 {
-  "name": "neon-knockout",
+  "name": "neon-knockout-3d",
   "private": true,
   "type": "module",
   "engines": {
@@ -23,11 +23,11 @@
   },
   "dependencies": {
     "express": "^5.2.1",
-    "phaser": "4.2.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
+    "three": "^0.186.0",
     "werift": "0.24.4",
     "zod": "^4.4.3"
   },
@@ -40,6 +40,7 @@
     "@types/node": "^26.4.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.5",
+    "@types/three": "^0.186.0",
     "@vitejs/plugin-react": "^6.1.1",
     "concurrently": "^10.0.5",
     "eslint": "^10.9.1",

@@ -16,7 +16,7 @@ async function openInvitePlayer(browser: Browser, inviteUrl: string): Promise<Pl
     if (message.type() === 'error') issues.consoleErrors.push(`${message.type()}: ${message.text()}`);
   });
   await page.goto(inviteUrl);
-  await expect(page.getByRole('heading', { name: 'NEON KNOCKOUT' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'NEON KNOCKOUT 3D' })).toBeVisible();
   return { context, page, issues };
 }
 
@@ -90,7 +90,7 @@ test('an invite link opens a name-only join flow and preserves its room URL', as
     await expect(host.page.getByRole('list', { name: 'Oyuncular' }).getByText('Linus')).toHaveCount(1);
 
     await guest.page.getByRole('button', { name: 'Odadan Çık' }).click();
-    await expect(guest.page.getByRole('heading', { name: 'NEON KNOCKOUT' })).toBeVisible();
+    await expect(guest.page.getByRole('heading', { name: 'NEON KNOCKOUT 3D' })).toBeVisible();
     await expect.poll(() => new URL(guest!.page.url()).pathname).toBe('/');
     await expect(host.page.getByRole('list', { name: 'Oyuncular' }).getByText('Linus')).toHaveCount(0);
     await expect.poll(() => game.server.rooms.debugRoom(code)?.playerIds).toEqual([hostPlayerId]);

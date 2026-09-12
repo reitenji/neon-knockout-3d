@@ -1,3 +1,4 @@
+import { mkdir } from 'node:fs/promises';
 import type { BoundingBox, Browser, CDPSession, ConsoleMessage } from '@playwright/test';
 import type { MatchPlayer } from '../../src/shared/model.js';
 import {
@@ -50,7 +51,7 @@ async function openMobilePlayer(browser: Browser, origin: string): Promise<Playe
     if (message.type() === 'error') issues.consoleErrors.push(`${message.type()}: ${message.text()}`);
   });
   await page.goto(origin);
-  await expect(page.getByRole('heading', { name: 'NEON KNOCKOUT' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'NEON KNOCKOUT 3D' })).toBeVisible();
   return { context, page, issues };
 }
 
@@ -181,6 +182,8 @@ test('portrait phone lobby rotates into a real touch-controlled authoritative ma
     await dispatchTouch(cdp, 'touchCancel');
 
     expect(player(game, code, hostPlayerId).lastProcessedInputSeq).toBeGreaterThan(0);
+    await mkdir('artifacts/qa', { recursive: true });
+    await host.page.screenshot({ path: 'artifacts/qa/match-mobile.png' });
     await assertNoUnexpectedErrors(game, host, guest);
   } finally {
     await Promise.all([host.context.close(), guest.context.close()]);

@@ -61,7 +61,7 @@ export function LandingScreen({
 
         <div className="landing-heading">
           <p className="eyebrow">LAN ARENA</p>
-          <h1 id="landing-title">NEON KNOCKOUT</h1>
+          <h1 id="landing-title">NEON KNOCKOUT <span className="title-3d">3D</span></h1>
         </div>
 
         <form

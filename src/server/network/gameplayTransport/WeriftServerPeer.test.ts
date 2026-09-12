@@ -149,15 +149,15 @@ describe.sequential('readWebRtcUdpPortRange', () => {
   it('uses the documented default range and ignores unrelated environment variables', async () => {
     const { readWebRtcUdpPortRange } = await import('./WeriftServerPeer.js');
 
-    expect(readWebRtcUdpPortRange({})).toEqual([53100, 53131]);
-    expect(readWebRtcUdpPortRange({ WEBRTC_PORT_MIN: '54000', WEBRTC_PORT_MAX: '54031' })).toEqual([53100, 53131]);
+    expect(readWebRtcUdpPortRange({})).toEqual([53140, 53171]);
+    expect(readWebRtcUdpPortRange({ WEBRTC_PORT_MIN: '54000', WEBRTC_PORT_MAX: '54031' })).toEqual([53140, 53171]);
   });
 
   it('reads only the two supported overrides, with defaults for omitted bounds', async () => {
     const { readWebRtcUdpPortRange } = await import('./WeriftServerPeer.js');
 
-    expect(readWebRtcUdpPortRange({ GAME_WEBRTC_UDP_PORT_MIN: '53099' })).toEqual([53099, 53131]);
-    expect(readWebRtcUdpPortRange({ GAME_WEBRTC_UDP_PORT_MAX: '53132' })).toEqual([53100, 53132]);
+    expect(readWebRtcUdpPortRange({ GAME_WEBRTC_UDP_PORT_MIN: '53139' })).toEqual([53139, 53171]);
+    expect(readWebRtcUdpPortRange({ GAME_WEBRTC_UDP_PORT_MAX: '53172' })).toEqual([53140, 53172]);
     expect(readWebRtcUdpPortRange({
       GAME_WEBRTC_UDP_PORT_MIN: '54000',
       GAME_WEBRTC_UDP_PORT_MAX: '54031'

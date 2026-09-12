@@ -1,4 +1,3 @@
-import type Phaser from 'phaser';
 import { GAME } from '../../../shared/constants.js';
 import { normalizeAxes } from '../../../shared/kinematics.js';
 import type { InputFrame, Vec2 } from '../../../shared/model.js';
@@ -24,16 +23,11 @@ export type ArenaInputLifecycle = Readonly<{
 type SampledArenaInput = Omit<InputFrame, 'viewTick'>;
 
 const INPUT_STEP_MS = 1_000 / GAME.maxInputFramesPerSecond;
-const SCENE_PAUSE_EVENT = 'pause';
-const SCENE_SLEEP_EVENT = 'sleep';
-const CAPTURED_KEY_CODES = [87, 65, 83, 68, 74, 75, 32];
 const GAMEPLAY_CODE_TO_KEY = new Map([
   ['KeyW', 'moveUp'], ['KeyA', 'moveLeft'], ['KeyS', 'moveDown'], ['KeyD', 'moveRight'], ['Space', 'dash'],
   ['KeyJ', 'quick'], ['KeyK', 'heavy']
 ]);
 type GameplayKey = 'moveUp' | 'moveDown' | 'moveLeft' | 'moveRight' | 'dash' | 'quick' | 'heavy';
-type CaptureLease = { owners: number; addedByUs: boolean };
-const captureLeases = new WeakMap<object, Map<number, CaptureLease>>();
 
 export class ArenaInput {
   private lastSampleAtMs = Number.NEGATIVE_INFINITY;
@@ -152,38 +146,6 @@ export class ArenaInput {
   }
 }
 
-type PhaserSceneInput = Pick<Phaser.Scene, 'input' | 'events'>;
-
-export function createPhaserInputSource(scene: PhaserSceneInput): ArenaInputSource {
-  const keyboard = scene.input.keyboard;
-  if (!keyboard) throw new Error('Keyboard input is required for Neon Knockout.');
-  const keys = keyboard.addKeys({
-    w: 'W', a: 'A', s: 'S', d: 'D',
-    quick: 'J', heavy: 'K', dash: 'SPACE'
-  }) as Record<string, Phaser.Input.Keyboard.Key>;
-  const releaseCaptures = acquireCaptures(keyboard);
-  const onSuspend = (listener: () => void): (() => void) => {
-    scene.events.on(SCENE_PAUSE_EVENT, listener);
-    scene.events.on(SCENE_SLEEP_EVENT, listener);
-    return () => {
-      scene.events.off(SCENE_PAUSE_EVENT, listener);
-      scene.events.off(SCENE_SLEEP_EVENT, listener);
-    };
-  };
-  return {
-    movement: () => ({
-      up: Boolean(keys.w?.isDown), down: Boolean(keys.s?.isDown),
-      left: Boolean(keys.a?.isDown), right: Boolean(keys.d?.isDown), dash: Boolean(keys.dash?.isDown)
-    }),
-    attack: () => ({
-      quick: Boolean(keys.quick?.isDown), heavy: Boolean(keys.heavy?.isDown)
-    }),
-    reset: () => keyboard.resetKeys(),
-    dispose: releaseCaptures,
-    onSuspend
-  };
-}
-
 function heldSourceKeys(movement: HeldMovement, attack: HeldAttack): GameplayKey[] {
   return [
     ...(movement.up ? ['moveUp' as const] : []), ...(movement.down ? ['moveDown' as const] : []),
@@ -199,37 +161,4 @@ function hasRawHeldKey(codes: ReadonlySet<string>, key: GameplayKey): boolean {
 
 function isSourceKeyHeld(key: GameplayKey, movement: HeldMovement, attack: HeldAttack): boolean {
   return ({ moveUp: movement.up, moveDown: movement.down, moveLeft: movement.left, moveRight: movement.right, dash: movement.dash, quick: attack.quick, heavy: attack.heavy } as Record<GameplayKey, boolean>)[key];
-}
-
-function acquireCaptures(keyboard: Phaser.Input.Keyboard.KeyboardPlugin): () => void {
-  const manager = keyboard.manager as object;
-  const leases = captureLeases.get(manager) ?? new Map<number, CaptureLease>();
-  captureLeases.set(manager, leases);
-  const existing = new Set(keyboard.getCaptures());
-  const toAdd: number[] = [];
-  for (const code of CAPTURED_KEY_CODES) {
-    const lease = leases.get(code);
-    if (lease) lease.owners += 1;
-    else {
-      leases.set(code, { owners: 1, addedByUs: !existing.has(code) });
-      if (!existing.has(code)) toAdd.push(code);
-    }
-  }
-  if (toAdd.length > 0) keyboard.addCapture(toAdd);
-  let released = false;
-  return () => {
-    if (released) return;
-    released = true;
-    const toRemove: number[] = [];
-    for (const code of CAPTURED_KEY_CODES) {
-      const lease = leases.get(code);
-      if (!lease) continue;
-      lease.owners -= 1;
-      if (lease.owners === 0) {
-        if (lease.addedByUs) toRemove.push(code);
-        leases.delete(code);
-      }
-    }
-    if (toRemove.length > 0) keyboard.removeCapture(toRemove);
-  };
 }

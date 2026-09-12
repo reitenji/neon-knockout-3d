@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { parsePort } from '../main.js';
 
 describe('parsePort', () => {
-  it('uses 4174 by default and accepts integer TCP ports', () => {
-    expect(parsePort(undefined)).toBe(4174);
+  it('uses 4175 by default and accepts integer TCP ports', () => {
+    expect(parsePort(undefined)).toBe(4175);
     expect(parsePort('1')).toBe(1);
     expect(parsePort('65535')).toBe(65535);
   });

@@ -127,7 +127,7 @@ export async function openPlayer(
     if (message.type() === 'error') issues.consoleErrors.push(errorText(message));
   });
   await page.goto(origin);
-  await expect(page.getByRole('heading', { name: 'NEON KNOCKOUT' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'NEON KNOCKOUT 3D' })).toBeVisible();
   return { context, page, issues };
 }
 

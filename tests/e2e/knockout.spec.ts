@@ -112,7 +112,7 @@ test('host room settings remain authoritative through a guest leave and clean re
     const leaveMarker = marker(game, match.code);
     await match.guest.page.getByRole('button', { name: 'Odadan Çık' }).click();
 
-    await expect(match.guest.page.getByRole('heading', { name: 'NEON KNOCKOUT' })).toBeVisible();
+    await expect(match.guest.page.getByRole('heading', { name: 'NEON KNOCKOUT 3D' })).toBeVisible();
     await expect(match.guest.page.getByRole('button', { name: 'Odadan Çık' })).toHaveCount(0);
     const noContest = await waitForEvent(
       game,
@@ -160,7 +160,7 @@ test('host room settings remain authoritative through a guest leave and clean re
     expect(rejoinedIds).not.toContain(match.guestPlayerId);
 
     await match.guest.page.getByRole('button', { name: 'Odadan Çık' }).click();
-    await expect(match.guest.page.getByRole('heading', { name: 'NEON KNOCKOUT' })).toBeVisible();
+    await expect(match.guest.page.getByRole('heading', { name: 'NEON KNOCKOUT 3D' })).toBeVisible();
     await expect(match.host.page.getByRole('list', { name: 'Oyuncular' }).getByText('Linus')).toHaveCount(0);
     await expect.poll(() => game.server.rooms.debugRoom(match.code)?.playerIds).toEqual([match.hostPlayerId]);
     expect(await match.guest.page.evaluate((roomCode) => ({
@@ -169,7 +169,7 @@ test('host room settings remain authoritative through a guest leave and clean re
     }), match.code)).toEqual({ lastRoom: null, resumeToken: null });
 
     await match.guest.page.reload();
-    await expect(match.guest.page.getByRole('heading', { name: 'NEON KNOCKOUT' })).toBeVisible();
+    await expect(match.guest.page.getByRole('heading', { name: 'NEON KNOCKOUT 3D' })).toBeVisible();
     await expect(match.guest.page.getByText('Bağlı', { exact: true })).toBeVisible();
     await expect(match.guest.page.getByRole('button', { name: 'Odadan Çık' })).toHaveCount(0);
     await expect.poll(() => game.server.rooms.debugRoom(match.code)?.playerIds).toEqual([match.hostPlayerId]);
@@ -193,7 +193,7 @@ test('two keyboard-only production contexts prove combat, reconnect, result, and
     const beforeMouse = player(game, match.code, match.hostPlayerId);
     const canvas = match.host.page.locator('.game-stage canvas');
     const box = await canvas.boundingBox();
-    if (!box) throw new Error('Phaser canvas was not mounted.');
+    if (!box) throw new Error('Three.js canvas was not mounted.');
     await match.host.page.mouse.move(box.x + box.width * 0.8, box.y + box.height * 0.2);
     await match.host.page.mouse.click(box.x + box.width * 0.7, box.y + box.height * 0.3, { button: 'left' });
     await match.host.page.mouse.click(box.x + box.width * 0.3, box.y + box.height * 0.7, { button: 'right' });
@@ -556,7 +556,7 @@ test('result screen preserves ready and departed player statuses', async ({ brow
     await expect(match.host.page.getByRole('row', { name: /Linus/ })).toContainText('Bekliyor');
 
     await match.guest.page.getByRole('button', { name: 'Odadan Çık' }).click();
-    await expect(match.guest.page.getByRole('heading', { name: 'NEON KNOCKOUT' })).toBeVisible();
+    await expect(match.guest.page.getByRole('heading', { name: 'NEON KNOCKOUT 3D' })).toBeVisible();
     await expect(match.host.page.getByRole('heading', { name: 'Ada Kazandı' })).toBeVisible();
     await expect(match.host.page.getByRole('row', { name: /Ada/ })).toContainText('Hazır');
     await expect(match.host.page.getByRole('row', { name: /Linus/ })).toContainText('Ayrıldı');

@@ -1,27 +1,20 @@
-import Phaser from 'phaser';
+import * as THREE from 'three';
 import { GAME } from '../../../shared/constants.js';
 import type { MatchAction, MatchPlayer, MatchPulse, MatchSnapshot, Vec2 } from '../../../shared/model.js';
-import type { GamePresentationBridge } from '../GamePresentationBridge.js';
-import { localPlayerIdFromBridge } from '../GamePresentationBridge.js';
+import { localPlayerIdFromBridge, type GamePresentationBridge, type NeonGameFactory } from '../GamePresentationBridge.js';
 import { SnapshotTimeline, extrapolateRemotePlayer, interpolateRemotePlayer } from '../prediction.js';
-import { ARENA_SCENE_KEY } from './BootScene.js';
-import { ArenaInput, createPhaserInputSource } from './ArenaInput.js';
-import { combineArenaInputSources } from './TouchInputSource.js';
-import { ArenaSession } from './ArenaSession.js';
-import { createArenaView, type ArenaView } from './ArenaView.js';
-import {
-  createFighterView,
-  type ChargeIndicatorState,
-  type FighterView
-} from './FighterView.js';
-import { GameAudio } from './GameAudio.js';
-import { ImpactFx } from './ImpactFx.js';
-import { LocalActionAudioTracker } from './LocalActionAudioTracker.js';
-import { PhaserAudioAdapter } from './PhaserAudioAdapter.js';
-import { PhaserImpactAdapter } from './PhaserImpactAdapter.js';
+import { ArenaInput } from '../runtime/ArenaInput.js';
+import { createDomInputSource } from '../runtime/DomInputSource.js';
+import { combineArenaInputSources } from '../runtime/TouchInputSource.js';
+import { ArenaSession } from '../runtime/ArenaSession.js';
+import { GameAudio } from '../runtime/GameAudio.js';
+import { WebAudioAdapter } from '../runtime/WebAudioAdapter.js';
+import { LocalActionAudioTracker } from '../runtime/LocalActionAudioTracker.js';
+import { AttackTelegraphTracker } from '../runtime/attackTelegraphTracker.js';
+import { createFighterView, type FighterView, type ChargeIndicatorState } from './FighterView.js';
 import { createPulseView, type PulseView } from './PulseView.js';
-import { AttackTelegraphTracker } from './attackTelegraphTracker.js';
-
+import { createArenaWorld } from './ArenaWorld.js';
+import { CombatEffects } from './CombatEffects.js';
 const INPUT_STEP_MS = 1_000 / 60;
 
 function playerById(snapshot: MatchSnapshot, playerId: string): MatchPlayer | null {
@@ -102,7 +95,7 @@ function pushBounded<T>(values: T[], value: T, limit = 256): void {
   if (values.length > limit) values.splice(0, values.length - limit);
 }
 
-export class ArenaScene extends Phaser.Scene {
+export class ThreeGame {
   private readonly localPlayerId: string | null;
   private readonly timeline = new SnapshotTimeline();
   private readonly views = new Map<string, FighterView>();
@@ -114,109 +107,70 @@ export class ArenaScene extends Phaser.Scene {
   private readonly localActionAudio = new LocalActionAudioTracker();
   private readonly attackTelegraphs = new AttackTelegraphTracker();
   private readonly unsubscribers: Array<() => void> = [];
-  private session: ArenaSession | null = null;
-  private arenaView: ArenaView | null = null;
-  private impactFx: ImpactFx | null = null;
-  private gameAudio: GameAudio | null = null;
+  private readonly renderer: THREE.WebGLRenderer;
+  private readonly world = createArenaWorld();
+  private readonly effects: CombatEffects;
+  private readonly resizeObserver: ResizeObserver;
+  private session: ArenaSession;
+  private gameAudio: GameAudio;
   private localCueSequence = 0;
   private resultPresented = false;
   private cleaned = false;
+  private raf = 0;
   private latestAcceptedSnapshotTick: number | null = null;
   private latestAcceptedSnapshot: MatchSnapshot | null = null;
   private latestAcceptedSnapshotAtMs: number | null = null;
   private presentationTargetTick: number | null = null;
-  private connected = false;
+  private connected: boolean;
 
-  constructor(
-    private readonly bridge: GamePresentationBridge,
-    private readonly reducedMotion: boolean
-  ) {
-    super(ARENA_SCENE_KEY);
+  constructor(private readonly parent: HTMLElement, private readonly bridge: GamePresentationBridge, private readonly reducedMotion: boolean) {
     this.localPlayerId = localPlayerIdFromBridge(bridge);
-  }
-
-  create(): void {
-    this.cleaned = false;
-    this.clearPulseViews();
-    this.activePlayerIds.clear();
-    this.activePulseIds.clear();
-    this.retiredPulseIds.clear();
-    this.resultPresented = false;
-    this.consumedEventIds.clear();
-    this.localActionAudio.reset();
-    this.localCueSequence = 0;
-    this.latestAcceptedSnapshotTick = null;
-    this.latestAcceptedSnapshot = null;
-    this.latestAcceptedSnapshotAtMs = null;
-    this.presentationTargetTick = null;
-    this.connected = this.bridge.isConnected();
-    this.cameras.main.setBackgroundColor('#02050a');
-    this.arenaView = createArenaView(this, { reducedMotion: this.reducedMotion });
-    this.impactFx = new ImpactFx(
-      new PhaserImpactAdapter(this, (playerId) => this.views.get(playerId) ?? null),
-      { reducedMotion: this.reducedMotion }
-    );
-    this.gameAudio = new GameAudio(new PhaserAudioAdapter(this.sound, window));
-    const keyboardInput = createPhaserInputSource(this);
-    const inputSource = this.bridge.inputSource
-      ? combineArenaInputSources(keyboardInput, this.bridge.inputSource)
-      : keyboardInput;
-    const inputController = new ArenaInput(inputSource, {
-      windowTarget: window,
-      documentTarget: document,
-      onShutdown: (listener) => {
-        this.events.on(Phaser.Scenes.Events.SHUTDOWN, listener);
-        return () => this.events.off(Phaser.Scenes.Events.SHUTDOWN, listener);
-      }
-    });
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.releaseResources, this);
-    this.events.once(Phaser.Scenes.Events.DESTROY, this.releaseResources, this);
-
-    this.session = new ArenaSession(
-      this.bridge,
-      this.localPlayerId ?? '',
-      inputController,
-      () => performance.now(),
-      (snapshot, receivedAtMs) => this.acceptTimelineSnapshot(snapshot, receivedAtMs),
-      () => ({
-        rollbackWindowFrames: this.timeline.rollbackWindowFrames(),
-        targetTick: this.presentationTargetTick
-      })
-    );
+    this.connected = bridge.isConnected();
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.2;
+    this.renderer.domElement.className = 'game-canvas';
+    this.renderer.domElement.dataset.renderer = 'three';
+    parent.append(this.renderer.domElement);
+    this.effects = new CombatEffects(this.world.scene, reducedMotion);
+    this.gameAudio = new GameAudio(new WebAudioAdapter());
+    const keyboard = createDomInputSource();
+    const source = bridge.inputSource ? combineArenaInputSources(keyboard, bridge.inputSource) : keyboard;
+    const input = new ArenaInput(source, { windowTarget: window, documentTarget: document, onShutdown: () => () => undefined });
+    this.session = new ArenaSession(bridge, this.localPlayerId ?? '', input, () => performance.now(),
+      (snapshot, now) => this.acceptTimelineSnapshot(snapshot, now),
+      () => ({ rollbackWindowFrames: this.timeline.rollbackWindowFrames(), targetTick: this.presentationTargetTick }));
     this.session.start();
-    this.unsubscribers.push(
-      this.bridge.subscribeConnected((connected) => this.acceptConnection(connected)),
-      this.bridge.subscribeEvent((event) => {
-        if (this.consumedEventIds.has(event.eventId)) return;
-        this.consumedEventIds.add(event.eventId);
-        if (event.type === 'PULSE_BREAK') {
-          this.retiredPulseIds.add(event.projectileId);
-          this.destroyPulseView(event.projectileId);
-        }
-        if (event.type === 'PERFECT_DODGE' && event.projectileId !== null) {
-          this.retiredPulseIds.add(event.projectileId);
-          this.destroyPulseView(event.projectileId);
-        }
-        if (event.type === 'RESULT') {
-          this.resultPresented = true;
-          this.clearPulseViews();
-        }
-        const snapshot = this.bridge.getSnapshot();
-        if (snapshot) this.impactFx?.ingest(event, snapshot);
-        this.gameAudio?.playEvent(event);
-      }),
-      this.bridge.subscribeMuted((muted) => this.gameAudio?.setMuted(muted))
-    );
-  }
-
-  update(): void {
-    this.session?.step(INPUT_STEP_MS);
-    if (!this.connected) return;
-    this.renderPresentation(performance.now());
-  }
-
-  getPresentationTargetTick(): number | null {
-    return this.presentationTargetTick;
+    this.unsubscribers.push(bridge.subscribeConnected((connected) => this.acceptConnection(connected)), bridge.subscribeEvent((event) => {
+      if (this.consumedEventIds.has(event.eventId)) return;
+      this.consumedEventIds.add(event.eventId);
+      if (event.type === 'PULSE_BREAK' || (event.type === 'PERFECT_DODGE' && event.projectileId !== null)) {
+        this.retiredPulseIds.add(event.projectileId!); this.destroyPulseView(event.projectileId!);
+      }
+      if (event.type === 'RESULT') { this.resultPresented = true; this.clearPulseViews(); }
+      const snapshot = bridge.getSnapshot();
+      if (snapshot) this.effects.ingest(event, snapshot);
+      this.gameAudio.playEvent(event);
+    }), bridge.subscribeMuted((muted) => this.gameAudio.setMuted(muted)));
+    const resize = (): void => {
+      const { width, height } = parent.getBoundingClientRect();
+      this.renderer.setSize(Math.max(1, width), Math.max(1, height));
+      this.world.resize(width, height);
+    };
+    this.resizeObserver = new ResizeObserver(resize); this.resizeObserver.observe(parent); resize();
+    const frame = (): void => {
+      if (this.cleaned) return;
+      this.session.step(INPUT_STEP_MS);
+      if (this.connected) this.renderPresentation(performance.now());
+      this.effects.update(performance.now());
+      this.renderer.render(this.world.scene, this.world.camera);
+      this.renderer.domElement.dataset.fighters = String(this.views.size);
+      this.raf = requestAnimationFrame(frame);
+    };
+    this.raf = requestAnimationFrame(frame);
   }
 
   private acceptTimelineSnapshot(snapshot: MatchSnapshot, receivedAtMs: number): void {
@@ -270,12 +224,7 @@ export class ArenaScene extends Phaser.Scene {
     }
     const frame = sample.frame;
     if (!frame) return;
-    this.arenaView?.apply({
-      phase: frame.current.phase,
-      remainingMs: frame.current.remainingMs,
-      platformProgress: frame.current.platformProgress,
-      settings: frame.current.settings
-    }, nowMs);
+    this.world.update(frame.current.platformProgress);
     const localPresentation = this.session?.getLocalPresentation() ?? null;
     this.reconcilePulses(frame.previous, frame.current, frame.alpha);
     const activeIds = this.activePlayerIds;
@@ -355,7 +304,7 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   private addView(player: MatchPlayer, isLocal: boolean): FighterView {
-    const view = createFighterView(this, player, isLocal, { reducedMotion: this.reducedMotion });
+    const view = createFighterView(this.world.scene, this.world.camera, this.parent, player, isLocal, this.reducedMotion);
     this.views.set(player.playerId, view);
     return view;
   }
@@ -374,7 +323,7 @@ export class ArenaScene extends Phaser.Scene {
       const presentation = previousPulse ? interpolatePulse(previousPulse, pulse, alpha) : pulse;
       const existing = this.pulseViews.get(pulse.projectileId);
       if (existing) existing.apply(presentation);
-      else this.pulseViews.set(pulse.projectileId, createPulseView(this, presentation));
+      else this.pulseViews.set(pulse.projectileId, createPulseView(this.world.scene, presentation));
     }
     for (const projectileId of this.pulseViews.keys()) {
       if (!activeIds.has(projectileId)) this.destroyPulseView(projectileId);
@@ -393,34 +342,17 @@ export class ArenaScene extends Phaser.Scene {
     this.pulseViews.clear();
   }
 
-  private releaseResources(): void {
+  destroy(): void {
     if (this.cleaned) return;
     this.cleaned = true;
-    for (const unsubscribe of this.unsubscribers.splice(0)) unsubscribe();
-    this.session?.dispose();
-    this.session = null;
-    this.timeline.clear();
-    this.attackTelegraphs.reset();
-    this.activePlayerIds.clear();
-    this.activePulseIds.clear();
-    this.consumedEventIds.clear();
-    this.retiredPulseIds.clear();
-    this.resultPresented = false;
-    this.localActionAudio.reset();
-    this.localCueSequence = 0;
-    this.latestAcceptedSnapshotTick = null;
-    this.latestAcceptedSnapshot = null;
-    this.latestAcceptedSnapshotAtMs = null;
-    this.presentationTargetTick = null;
-    this.connected = false;
-    this.impactFx?.dispose();
-    this.impactFx = null;
-    this.gameAudio?.dispose();
-    this.gameAudio = null;
-    this.arenaView?.destroy();
-    this.arenaView = null;
+    cancelAnimationFrame(this.raf);
+    this.resizeObserver.disconnect();
+    this.unsubscribers.splice(0).forEach((unsubscribe) => unsubscribe());
+    this.session.dispose(); this.timeline.clear(); this.gameAudio.dispose(); this.effects.dispose();
     for (const view of this.views.values()) view.destroy();
-    this.views.clear();
-    this.clearPulseViews();
+    this.views.clear(); this.clearPulseViews(); this.world.dispose();
+    this.renderer.dispose(); this.renderer.forceContextLoss(); this.renderer.domElement.remove();
   }
 }
+
+export const createThreeGame: NeonGameFactory = (parent, bridge, options) => new ThreeGame(parent, bridge, options?.reducedMotion ?? false);

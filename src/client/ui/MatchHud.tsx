@@ -1,3 +1,4 @@
+import { FIGHTERS } from '../../shared/fighters.js';
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, type CSSProperties } from 'react';
 import { ACCENTS, GAME } from '../../shared/constants.js';
 import type { MatchPhase, MatchPlayer, MatchSnapshot, PlayerNetworkStatus } from '../../shared/model.js';
@@ -189,7 +190,7 @@ function ControlsHint() {
       <span><kbd>WASD</kbd><small>Hareket / yön</small></span>
       <span><kbd>J</kbd><small>Hızlı vur</small></span>
       <span><kbd>K</kbd><small>Yükle / vur</small></span>
-      <span><kbd>Space</kbd><small>Dash</small></span>
+      <span><kbd>Space</kbd><small>Yetenek</small></span>
     </div>
   );
 }
@@ -201,7 +202,7 @@ export function MatchHud({ bridge, localPlayerId }: MatchHudProps) {
   const announcement = snapshot ? phaseAnnouncement(snapshot) : null;
   const overload = localPlayer ? Math.round(clamp(localPlayer.overload, 0, GAME.maxOverload)) : 0;
   const dashProgress = localPlayer
-    ? 1 - clamp(localPlayer.dashCooldownRemainingMs / GAME.dashCooldownMs, 0, 1)
+    ? 1 - clamp(localPlayer.dashCooldownRemainingMs / FIGHTERS[localPlayer.chassis].dashCooldownMs, 0, 1)
     : 0;
   const matchTiming = snapshot ? matchTimingFor(snapshot.settings.durationMs) : null;
   const contractionWarning = snapshot?.phase === 'REGULATION' &&
@@ -250,7 +251,7 @@ export function MatchHud({ bridge, localPlayerId }: MatchHudProps) {
               </div>
 
               <div className="match-hud__ability">
-                <span>DASH</span>
+                <span>{FIGHTERS[localPlayer.chassis].abilityName}</span>
                 <strong>{localPlayer.dashRemainingMs > 0 ? 'Aktif' : localPlayer.dashCooldownRemainingMs > 0 ? `${(localPlayer.dashCooldownRemainingMs / 1_000).toFixed(1)} sn` : 'Hazır'}</strong>
                 <div
                   className="match-hud__meter"

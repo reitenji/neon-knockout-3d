@@ -5,7 +5,7 @@ import { createGameServer } from './network/createGameServer.js';
 import { discoverLanUrls } from './runtime/lanAddresses.js';
 
 export function parsePort(value: string | undefined): number {
-  if (value === undefined) return 4174;
+  if (value === undefined) return 4175;
   if (!/^\d+$/u.test(value)) throw new Error(`Geçersiz PORT: ${value}`);
   const port = Number(value);
   if (!Number.isInteger(port) || port < 1 || port > 65_535) throw new Error(`Geçersiz PORT: ${value}`);
@@ -18,7 +18,7 @@ export async function runGameServer(): Promise<void> {
   const server = createGameServer({ host, port });
   const address = await server.start();
 
-  console.log('⚡ Neon Relay — LAN Arena');
+  console.log('⚡ Neon Knockout 3D — LAN Arena');
   for (const candidate of discoverLanUrls(address.port, networkInterfaces())) {
     const label = candidate.kind === 'local'
       ? 'Bu bilgisayar'
@@ -33,7 +33,7 @@ export async function runGameServer(): Promise<void> {
   const shutdown = (): Promise<void> => {
     if (shutdownPromise) return shutdownPromise;
     shutdownPromise = server.stop().catch((error: unknown) => {
-      console.error('Neon Relay kapatılırken hata oluştu.', error);
+      console.error('Neon Knockout 3D kapatılırken hata oluştu.', error);
       process.exitCode = 1;
     });
     return shutdownPromise;
@@ -46,7 +46,7 @@ export async function runGameServer(): Promise<void> {
 const entryPath = process.argv[1] ? pathToFileURL(resolve(process.argv[1])).href : null;
 if (entryPath === import.meta.url) {
   runGameServer().catch((error: unknown) => {
-    console.error('Neon Relay başlatılamadı.', error);
+    console.error('Neon Knockout 3D başlatılamadı.', error);
     process.exitCode = 1;
   });
 }

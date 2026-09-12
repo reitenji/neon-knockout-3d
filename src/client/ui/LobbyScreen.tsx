@@ -1,3 +1,4 @@
+import { CharacterPreview } from '../game/three/CharacterPreview.js';
 import { CHASSIS, type Chassis, type RoomPlayer } from '../../shared/model.js';
 import { ACCENTS } from '../../shared/constants.js';
 import {
@@ -94,6 +95,8 @@ export function LobbyScreen({
           </div>
           {isHost ? <LanSharePanel roomCode={room.roomCode} /> : null}
         </header>
+
+        <CharacterPreview selected={selfPlayer?.chassis ?? 'RIFT'} />
 
         <fieldset className="chassis-picker" disabled={!selfPlayer || anyPending}>
           <legend>Gövdeni seç</legend>

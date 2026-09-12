@@ -1,10 +1,11 @@
+import { FIGHTERS } from '../../shared/fighters.js';
 import '@testing-library/jest-dom/vitest';
 import { act, cleanup, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MatchPlayer, MatchSnapshot } from '../../shared/model.js';
 import { DEFAULT_ROOM_SETTINGS } from '../../shared/roomSettings.js';
 import type { GamePresentationBridge } from '../game/GamePresentationBridge.js';
-import { PhaserArena } from '../game/PhaserArena.js';
+import { ThreeArena } from '../game/ThreeArena.js';
 import { MatchHud } from './MatchHud.js';
 
 const idleAction = {
@@ -25,7 +26,7 @@ function player(overrides: Partial<MatchPlayer> = {}): MatchPlayer {
     lastProcessedInputSeq: 0,
     action: { ...idleAction, chargeMs: 350, charging: true },
     dashRemainingMs: 0,
-    dashCooldownRemainingMs: 550,
+    dashCooldownRemainingMs: FIGHTERS.RIFT.dashCooldownMs / 2,
     hitstunRemainingMs: 0,
     respawnRemainingMs: 0,
     protectionRemainingMs: 0,
@@ -130,7 +131,7 @@ describe('MatchHud', () => {
   it('makes countdown, ranking, local combat state, connection, and every control discoverable', () => {
     const bridge = new PresentationBridge();
     render(
-      <PhaserArena
+      <ThreeArena
         bridge={bridge}
         localPlayerId="p-local"
         createGame={() => ({ destroy() {} })}
@@ -317,7 +318,7 @@ describe('MatchHud', () => {
     const bridge = new PresentationBridge();
     const createGame = vi.fn(() => ({ destroy() {} }));
     const view = render(
-      <PhaserArena bridge={bridge} localPlayerId="p-local" createGame={createGame} reducedMotion />
+      <ThreeArena bridge={bridge} localPlayerId="p-local" createGame={createGame} reducedMotion />
     );
 
     act(() => bridge.publish(snapshot({
@@ -381,7 +382,7 @@ describe('MatchHud', () => {
       })]
     });
 
-    render(<PhaserArena bridge={bridge} localPlayerId="p-local" createGame={() => ({ destroy() {} })} reducedMotion />);
+    render(<ThreeArena bridge={bridge} localPlayerId="p-local" createGame={() => ({ destroy() {} })} reducedMotion />);
 
     expect(screen.getByRole('status', { name: 'Aksiyon durumu' })).toHaveTextContent('Geri dönüş 0.7 sn');
   });
@@ -389,7 +390,7 @@ describe('MatchHud', () => {
   it('shows sudden death once for 1100ms despite repeated snapshots while retaining the phase header', () => {
     const bridge = new PresentationBridge();
     render(
-      <PhaserArena bridge={bridge} localPlayerId="p-local" createGame={() => ({ destroy() {} })} reducedMotion />
+      <ThreeArena bridge={bridge} localPlayerId="p-local" createGame={() => ({ destroy() {} })} reducedMotion />
     );
 
     act(() => bridge.publish(snapshot({ phase: 'REGULATION', remainingMs: 90_000 })));

@@ -14,7 +14,7 @@ export function TopBar({ state, onToggleSound, onLeaveRoom }: TopBarProps) {
 
   return (
     <header className="top-bar">
-      <span className="top-bar__mark">NEON <strong>KNOCKOUT</strong></span>
+      <span className="top-bar__mark">NEON <strong>KNOCKOUT 3D</strong></span>
 
       <span className="top-bar__context">
         {state.room ? (

@@ -523,6 +523,9 @@ test('holds one LAN viewport frame budget while eight authoritative players figh
       if (observer?.reconciliations) (observer.reconciliations as unknown[]).splice(0);
     });
 
+    // Latency sampling moves the fighter; reset the load layout before combat.
+    await placePlayers(game, match.code, measuredId, companionIds);
+    await retainMeasuredAim(game, match.code, match.measured, measuredId);
     const before = authoritativePlayer(game, match.code, measuredId);
     const eventMarker = game.harness.recentEvents(match.code).at(-1)?.eventId ?? 0;
     companionDrive = driveCompanions(match.companions, driveAbort.signal);
@@ -702,10 +705,11 @@ test('holds browser frame time below 50 ms through four simultaneous hit-driven 
     expect(livePulse.remainingMs).toBeGreaterThan(250);
 
     frameSampler = sampleFrameTimeline(match.measured);
+    // BASTION targets start 10 px nearer the fall boundary to compensate for armor.
     const pairs = [
-      { attackerId: attackerA, targetId: companionIds[0]!, attacker: { x: 1139, y: 360 }, target: { x: 1198, y: 360 }, facing: { x: 1, y: 0 } },
+      { attackerId: attackerA, targetId: companionIds[0]!, attacker: { x: 1139, y: 360 }, target: { x: 1208, y: 360 }, facing: { x: 1, y: 0 } },
       { attackerId: companionIds[1]!, targetId: companionIds[2]!, attacker: { x: 141, y: 360 }, target: { x: 82, y: 360 }, facing: { x: -1, y: 0 } },
-      { attackerId: companionIds[3]!, targetId: companionIds[4]!, attacker: { x: 640, y: 91 }, target: { x: 640, y: 32 }, facing: { x: 0, y: -1 } },
+      { attackerId: companionIds[3]!, targetId: companionIds[4]!, attacker: { x: 640, y: 91 }, target: { x: 640, y: 22 }, facing: { x: 0, y: -1 } },
       { attackerId: companionIds[5]!, targetId: companionIds[6]!, attacker: { x: 640, y: 629 }, target: { x: 640, y: 688 }, facing: { x: 0, y: 1 } }
     ] as const;
     const targetIds = new Set(pairs.map((pair) => pair.targetId));

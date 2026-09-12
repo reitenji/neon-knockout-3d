@@ -1,6 +1,6 @@
 import { profileForAttack, type AttackProfileId } from '../../../shared/combat/profiles.js';
 import type { MatchAction, MatchPlayer, Vec2 } from '../../../shared/model.js';
-import type { AttackTelegraph } from './FighterView.js';
+export type AttackTelegraph = Readonly<{ profileId: AttackProfileId; facing: Vec2; previousProgress: number; currentProgress: number; active: boolean }>;
 
 const MIN_SWEEP_MS = 1_000 / 60;
 const EPSILON = 0.000001;
