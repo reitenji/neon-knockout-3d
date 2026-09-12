@@ -8,6 +8,7 @@ import { ResultScreen } from './ResultScreen.js';
 
 function player(overrides: Partial<RoomPlayer> = {}): RoomPlayer {
   return {
+    role: 'FIGHTER', botDifficulty: null,
     playerId: 'p-1', name: 'Ada', chassis: 'RIFT', accent: 0, ready: false, connected: true,
     reconnectRemainingMs: null,
     stats: { knockouts: 3, falls: 1, landedHits: 7, completedAttacks: 10 },
@@ -33,7 +34,7 @@ function resultState(overrides: Partial<ClientState> = {}): ClientState {
         reason: 'TIME',
         players: [
           resultPlayer('WAITING'),
-          resultPlayer('READY', { playerId: 'p-2', name: 'Zeynep', chassis: 'BASTION', accent: 1, ready: true, stats: { knockouts: 4, falls: 2, landedHits: 9, completedAttacks: 12 } }),
+          resultPlayer('READY', { role: 'FIGHTER', botDifficulty: null, playerId: 'p-2', name: 'Zeynep', chassis: 'BASTION', accent: 1, ready: true, stats: { knockouts: 4, falls: 2, landedHits: 9, completedAttacks: 12 } }),
           resultPlayer('LEFT', { playerId: 'p-3', name: 'Linus', chassis: 'PULSE', accent: 2, connected: false, stats: { knockouts: 3, falls: 1, landedHits: 7, completedAttacks: 20 } }),
           resultPlayer('WAITING', { playerId: 'p-4', name: 'Grace', chassis: 'WRAITH', accent: 3, stats: { knockouts: 3, falls: 1, landedHits: 7, completedAttacks: 14 } })
         ]
@@ -41,7 +42,7 @@ function resultState(overrides: Partial<ClientState> = {}): ClientState {
       settings: DEFAULT_ROOM_SETTINGS,
       players: [
         player(),
-        player({ playerId: 'p-2', name: 'Zeynep', chassis: 'BASTION', accent: 1, ready: true, stats: { knockouts: 4, falls: 2, landedHits: 9, completedAttacks: 12 } }),
+        player({ role: 'FIGHTER', botDifficulty: null, playerId: 'p-2', name: 'Zeynep', chassis: 'BASTION', accent: 1, ready: true, stats: { knockouts: 4, falls: 2, landedHits: 9, completedAttacks: 12 } }),
         player({ playerId: 'p-4', name: 'Grace', chassis: 'WRAITH', accent: 3, stats: { knockouts: 3, falls: 1, landedHits: 7, completedAttacks: 14 } })
       ]
     },

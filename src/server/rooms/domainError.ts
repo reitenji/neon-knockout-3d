@@ -1,4 +1,8 @@
 export type DomainErrorCode =
+  | 'BOT_NOT_FOUND'
+  | 'INVALID_DIFFICULTY'
+  | 'INVALID_ROLE'
+  | 'SPECTATOR_ACTION'
   | 'ALREADY_IN_ROOM'
   | 'INVALID_CHASSIS'
   | 'INVALID_NAME'

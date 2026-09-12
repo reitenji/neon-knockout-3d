@@ -9,6 +9,10 @@ import {
 import type { GameplayTransportMode } from '../../shared/gameplayTransport.js';
 import {
   lobbyChassisSchema,
+  lobbyRoleSchema,
+  lobbyBotAddSchema,
+  lobbyBotUpdateSchema,
+  lobbyBotRemoveSchema,
   lobbyReadySchema,
   lobbySettingsSchema,
   matchStartSchema,
@@ -325,7 +329,7 @@ export function registerSocketHandlers(options: SocketHandlerOptions): void {
         roomJoinSchema,
         payload,
         callback,
-        (validated) => rooms.joinRoom(socket.id, validated.roomCode, validated.name),
+        (validated) => rooms.joinRoom(socket.id, validated.roomCode, validated.name, validated.role),
         establishSession
       );
     });
@@ -369,6 +373,30 @@ export function registerSocketHandlers(options: SocketHandlerOptions): void {
     socket.on('lobby:chassis', (payload, callback) => {
       acknowledge(lobbyChassisSchema, payload, callback, (validated) => {
         rooms.setChassis(socket.id, validated.chassis);
+        return null;
+      });
+    });
+    socket.on('lobby:role', (payload, callback) => {
+      acknowledge(lobbyRoleSchema, payload, callback, (validated) => {
+        rooms.setRole(socket.id, validated.role);
+        return null;
+      });
+    });
+    socket.on('lobby:bot:add', (payload, callback) => {
+      acknowledge(lobbyBotAddSchema, payload, callback, (validated) => {
+        rooms.addBot(socket.id, validated.chassis, validated.difficulty);
+        return null;
+      });
+    });
+    socket.on('lobby:bot:update', (payload, callback) => {
+      acknowledge(lobbyBotUpdateSchema, payload, callback, (validated) => {
+        rooms.updateBot(socket.id, validated.playerId, validated.chassis, validated.difficulty);
+        return null;
+      });
+    });
+    socket.on('lobby:bot:remove', (payload, callback) => {
+      acknowledge(lobbyBotRemoveSchema, payload, callback, (validated) => {
+        rooms.removeBot(socket.id, validated.playerId);
         return null;
       });
     });

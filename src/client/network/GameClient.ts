@@ -1,5 +1,5 @@
 import { io, type Socket } from 'socket.io-client';
-import type { Ack, Chassis, GameEvent, InputFrame, MatchSnapshot, RoomState, ServerError, SessionWelcome } from '../../shared/model.js';
+import type { Ack, BotDifficulty, PlayerRole, Chassis, GameEvent, InputFrame, MatchSnapshot, RoomState, ServerError, SessionWelcome } from '../../shared/model.js';
 import type { RoomSettings } from '../../shared/roomSettings.js';
 import type { ClientToServerEvents, ServerToClientEvents } from '../../shared/protocol.js';
 import { createGameplayTransport } from './GameplayTransport.js';
@@ -23,8 +23,12 @@ export interface GameClient {
   getConnectionState(): GameClientConnectionState;
   subscribe<E extends keyof GameClientEvents>(event: E, listener: GameClientEvents[E]): () => void;
   createRoom(name: string): Promise<Ack<SessionWelcome>>;
-  joinRoom(name: string, roomCode: string): Promise<Ack<SessionWelcome>>;
+  joinRoom(name: string, roomCode: string, role?: PlayerRole): Promise<Ack<SessionWelcome>>;
   resumeSession(roomCode: string, resumeToken: string): Promise<Ack<SessionWelcome>>;
+  setRole(role: PlayerRole): Promise<Ack<null>>;
+  addBot(chassis: Chassis, difficulty: BotDifficulty): Promise<Ack<null>>;
+  updateBot(playerId: string, chassis: Chassis, difficulty: BotDifficulty): Promise<Ack<null>>;
+  removeBot(playerId: string): Promise<Ack<null>>;
   setChassis(chassis: Chassis): Promise<Ack<null>>;
   setReady(ready: boolean): Promise<Ack<null>>;
   setRoomSettings(settings: RoomSettings): Promise<Ack<null>>;
@@ -188,7 +192,9 @@ export function createSocketGameClient(options: SocketGameClientOptions = {}): G
     roomPhase = null;
     publish('session:welcome', welcome);
   });
+  let spectator = false;
   socket.on('room:state', (state) => {
+    spectator = state.players.find((player) => player.playerId === localPlayerId)?.role === 'SPECTATOR';
     const startsFreshGeneration = hasSession && roomPhase === 'RESULT' && state.phase === 'LOBBY';
     roomPhase = state.phase;
     if (startsFreshGeneration) replaceBundleAndStart();
@@ -231,11 +237,23 @@ export function createSocketGameClient(options: SocketGameClientOptions = {}): G
     createRoom(name: string): Promise<Ack<SessionWelcome>> {
       return withAckTimeout((acknowledge) => socket.emit('room:create', { name }, acknowledge));
     },
-    joinRoom(name: string, roomCode: string): Promise<Ack<SessionWelcome>> {
-      return withAckTimeout((acknowledge) => socket.emit('room:join', { name, roomCode }, acknowledge));
+    joinRoom(name: string, roomCode: string, role?: PlayerRole): Promise<Ack<SessionWelcome>> {
+      return withAckTimeout((acknowledge) => socket.emit('room:join', { name, roomCode, ...(role ? { role } : {}) }, acknowledge));
     },
     resumeSession(roomCode: string, resumeToken: string): Promise<Ack<SessionWelcome>> {
       return withAckTimeout((acknowledge) => socket.emit('session:resume', { roomCode, resumeToken }, acknowledge));
+    },
+    setRole(role): Promise<Ack<null>> {
+      return withAckTimeout((acknowledge) => socket.emit('lobby:role', { role }, acknowledge));
+    },
+    addBot(chassis, difficulty): Promise<Ack<null>> {
+      return withAckTimeout((acknowledge) => socket.emit('lobby:bot:add', { chassis, difficulty }, acknowledge));
+    },
+    updateBot(playerId, chassis, difficulty): Promise<Ack<null>> {
+      return withAckTimeout((acknowledge) => socket.emit('lobby:bot:update', { playerId, chassis, difficulty }, acknowledge));
+    },
+    removeBot(playerId): Promise<Ack<null>> {
+      return withAckTimeout((acknowledge) => socket.emit('lobby:bot:remove', { playerId }, acknowledge));
     },
     setChassis(chassis: Chassis): Promise<Ack<null>> {
       return withAckTimeout((acknowledge) => socket.emit('lobby:chassis', { chassis }, acknowledge));
@@ -262,6 +280,7 @@ export function createSocketGameClient(options: SocketGameClientOptions = {}): G
       return withAckTimeout((acknowledge) => socket.emit('match:start', {}, acknowledge));
     },
     sendInput(input: InputFrame): void {
+      if (spectator) return;
       if (!activeBundle?.transport.sendInput(input)) socket.emit('match:input', input);
     },
     setResultReady(ready: boolean): Promise<Ack<null>> {

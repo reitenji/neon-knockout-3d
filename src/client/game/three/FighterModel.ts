@@ -15,6 +15,10 @@ export interface FighterModel {
   rightElbow: THREE.Group;
   leftLeg: THREE.Group;
   rightLeg: THREE.Group;
+  leftKnee: THREE.Group;
+  rightKnee: THREE.Group;
+  leftFoot: THREE.Group;
+  rightFoot: THREE.Group;
   ornaments: THREE.Group;
   glow: THREE.MeshStandardMaterial;
   armor: THREE.MeshStandardMaterial;
@@ -70,6 +74,10 @@ export function createFighterModel(chassis: Chassis): FighterModel {
   const rightElbow = pivot(rightArm, 0, -15);
   const leftLeg = pivot(body, bulky ? 12 : 9, 25);
   const rightLeg = pivot(body, bulky ? -12 : -9, 25);
+  const leftKnee = pivot(leftLeg, 0, -13);
+  const rightKnee = pivot(rightLeg, 0, -13);
+  const leftFoot = pivot(leftKnee, 0, -10);
+  const rightFoot = pivot(rightKnee, 0, -10);
   const ornaments = pivot(body, 0, torsoHeight);
 
   for (const [arm, elbow] of [[leftArm, leftElbow], [rightArm, rightElbow]]) {
@@ -82,13 +90,13 @@ export function createFighterModel(chassis: Chassis): FighterModel {
   }
 
   if (!floating) {
-    for (const leg of [leftLeg, rightLeg]) {
-      sphere(leg, bulky ? 7 : 5, joint);
-      box(leg, bulky ? 15 : 9, 12, bulky ? 16 : 10, armor, 0, -6);
-      sphere(leg, 4, joint, 0, -13);
-      box(leg, bulky ? 16 : 9, 10, bulky ? 16 : 11, dark, 0, -18);
-      box(leg, bulky ? 19 : 12, 7, bulky ? 27 : 20, armor, 0, -23, 4);
-      box(leg, bulky ? 12 : 6, 2, 2, glow, 0, -22, bulky ? 18 : 15);
+    for (const [leg, knee, foot] of [[leftLeg, leftKnee, leftFoot], [rightLeg, rightKnee, rightFoot]]) {
+      sphere(leg!, bulky ? 7 : 5, joint);
+      box(leg!, bulky ? 15 : 9, 12, bulky ? 16 : 10, armor, 0, -6);
+      sphere(knee!, 4, joint);
+      box(knee!, bulky ? 16 : 9, 9, bulky ? 16 : 11, dark, 0, -5);
+      box(foot!, bulky ? 19 : 12, 7, bulky ? 27 : 20, armor, 0, 0, 4);
+      box(foot!, bulky ? 12 : 6, 2, 2, glow, 0, 1, bulky ? 18 : 15);
     }
   }
 
@@ -157,5 +165,5 @@ export function createFighterModel(chassis: Chassis): FighterModel {
     }
   }
   root.updateMatrixWorld(true);
-  return { root, body, head, leftArm, rightArm, leftElbow, rightElbow, leftLeg, rightLeg, ornaments, glow, armor, materials: [armor, dark, pale, glow, joint], dispose: () => disposeObject(root) };
+  return { root, body, head, leftArm, rightArm, leftElbow, rightElbow, leftLeg, rightLeg, leftKnee, rightKnee, leftFoot, rightFoot, ornaments, glow, armor, materials: [armor, dark, pale, glow, joint], dispose: () => disposeObject(root) };
 }

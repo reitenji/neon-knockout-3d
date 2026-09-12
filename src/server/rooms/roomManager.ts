@@ -1,4 +1,3 @@
-import { timingSafeEqual } from 'node:crypto';
 import { ARENA, CHASSIS, GAME } from '../../shared/constants.js';
 import {
   RTT_FRESHNESS_MS,
@@ -9,6 +8,8 @@ import {
 } from '../../shared/gameplayTransport.js';
 import { DEFAULT_ROOM_SETTINGS, type RoomSettings } from '../../shared/roomSettings.js';
 import type {
+  BotDifficulty,
+  PlayerRole,
   Chassis,
   GameEvent,
   InputFrame,
@@ -36,6 +37,8 @@ import { CombatFrameHistory } from '../game/CombatFrameHistory.js';
 import { clampClaimedViewTick } from '../game/netcodeCompensation.js';
 import { createEmptyInput, createMatchState, createPlayerStats, type MatchState } from '../game/state.js';
 import { clearPulses, removePulsesOwnedBy } from '../game/projectiles.js';
+import { BotController } from '../game/botController.js';
+import { BOT_DIFFICULTIES } from '../../shared/model.js';
 import { DomainError } from './domainError.js';
 
 const ROOM_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -54,6 +57,8 @@ export type RoomPublication =
   | { type: 'ROOM_CLOSED'; roomCode: string };
 
 type RoomPlayer = {
+  role: PlayerRole;
+  botDifficulty: BotDifficulty | null;
   playerId: string;
   name: string;
   chassis: Chassis;
@@ -68,6 +73,8 @@ type RoomPlayer = {
 };
 
 type ResultPlayerRecord = {
+  role: PlayerRole;
+  botDifficulty: BotDifficulty | null;
   playerId: string;
   name: string;
   chassis: Chassis;
@@ -90,6 +97,7 @@ type Room = {
   network: Map<string, PlayerNetworkRuntime>;
   combatHistory: CombatFrameHistory | null;
   inputs: Map<string, InputFrame>;
+  bots: Map<string, BotController>;
   accumulatorMs: number;
   snapshotAccumulatorMs: number;
 };
@@ -149,6 +157,12 @@ export type DebugRoom = Readonly<{
 
 function bytesToHex(bytes: Uint8Array): string {
   return Array.from(bytes, (value) => value.toString(16).padStart(2, '0')).join('');
+}
+
+function equalTokenBytes(left: Uint8Array, right: Uint8Array): boolean {
+  let difference = left.length ^ right.length;
+  for (let index = 0; index < left.length; index++) difference |= left[index] ^ right[index];
+  return difference === 0;
 }
 
 function emptyStats(): PlayerStats {
@@ -218,6 +232,8 @@ export class RoomManager {
     const resumeToken = this.deps.randomBytes(32);
     const player: RoomPlayer = {
       playerId,
+      role: 'FIGHTER',
+      botDifficulty: null,
       name: normalizedName,
       chassis: CHASSIS[0],
       accent: 0,
@@ -242,6 +258,7 @@ export class RoomManager {
       network: new Map([[playerId, createNetworkRuntime()]]),
       combatHistory: null,
       inputs: new Map(),
+      bots: new Map(),
       accumulatorMs: 0,
       snapshotAccumulatorMs: 0
     };
@@ -251,22 +268,25 @@ export class RoomManager {
     return { playerId, roomCode, resumeToken: bytesToHex(resumeToken), resumed: false };
   }
 
-  joinRoom(connectionId: string, roomCode: string, name: string): SessionWelcome {
+  joinRoom(connectionId: string, roomCode: string, name: string, role: PlayerRole = 'FIGHTER'): SessionWelcome {
     this.assertConnectionAvailable(connectionId);
     const room = this.requireRoom(roomCode);
-    if (room.phase === 'COUNTDOWN' || room.phase === 'MATCH') {
+    this.assertRole(role);
+    if (role === 'FIGHTER' && (room.phase === 'COUNTDOWN' || room.phase === 'MATCH')) {
       throw new DomainError('MATCH_IN_PROGRESS', 'Maç devam ederken yeni oyuncu katılamaz.', true);
     }
-    if (room.players.size >= GAME.maxPlayers) throw new DomainError('ROOM_FULL', 'Oda dolu.', true);
+    this.assertRoleCapacity(room, role);
     const normalizedName = this.normalizeName(name);
     const playerId = bytesToHex(this.deps.randomBytes(16));
     const resumeToken = this.deps.randomBytes(32);
     const order = room.nextPlayerOrder++;
     room.players.set(playerId, {
       playerId,
+      role,
+      botDifficulty: null,
       name: normalizedName,
       chassis: CHASSIS[order % CHASSIS.length],
-      accent: this.lowestUnusedAccent(room),
+      accent: role === 'FIGHTER' ? this.lowestUnusedAccent(room) : 0,
       ready: false,
       connected: true,
       stats: emptyStats(),
@@ -293,7 +313,7 @@ export class RoomManager {
     const now = this.deps.now();
     const player = [...room.players.values()].find((candidate) =>
       !candidate.connected && candidate.expiresAt !== null && candidate.expiresAt > now &&
-      candidate.resumeToken.byteLength === token.byteLength && timingSafeEqual(candidate.resumeToken, token));
+      candidate.resumeToken.byteLength === token.byteLength && equalTokenBytes(candidate.resumeToken, token));
     if (!player) {
       throw new DomainError('INVALID_RESUME_TOKEN', 'Yeniden bağlanma anahtarı geçersiz veya süresi dolmuş.', true);
     }
@@ -317,6 +337,7 @@ export class RoomManager {
 
   setChassis(connectionId: string, chassis: Chassis): void {
     const { room, player } = this.requireConnectedPlayer(connectionId);
+    this.assertFighter(player);
     if (room.phase !== 'LOBBY') throw new DomainError('INVALID_PHASE', 'Bu işlem şu anda kullanılamaz.', true);
     if (!(CHASSIS as readonly string[]).includes(chassis)) {
       throw new DomainError('INVALID_CHASSIS', 'Gövde seçimi geçersiz.', true);
@@ -327,8 +348,80 @@ export class RoomManager {
     this.publishRoom(room);
   }
 
+  setRole(connectionId: string, role: PlayerRole): void {
+    const { room, player } = this.requireConnectedPlayer(connectionId);
+    if (room.phase !== 'LOBBY') throw new DomainError('INVALID_PHASE', 'Bu işlem şu anda kullanılamaz.', true);
+    this.assertRole(role);
+    if (player.role === role) return;
+    this.assertRoleCapacity(room, role);
+    if (role === 'FIGHTER') player.accent = this.lowestUnusedAccent(room);
+    player.role = role;
+    player.ready = false;
+    this.publishRoom(room);
+  }
+
+  addBot(connectionId: string, chassis: Chassis, difficulty: BotDifficulty): void {
+    const room = this.requireBotHost(connectionId);
+    this.assertBotSelection(chassis, difficulty);
+    this.assertRoleCapacity(room, 'FIGHTER');
+    const order = room.nextPlayerOrder++;
+    const playerId = `bot-${bytesToHex(this.deps.randomBytes(16))}`;
+    room.players.set(playerId, {
+      playerId, name: `Bot ${order + 1}`, chassis, botDifficulty: difficulty, role: 'FIGHTER',
+      accent: this.lowestUnusedAccent(room), ready: true, connected: true, stats: emptyStats(),
+      resumeToken: new Uint8Array(), order, expiresAt: null, reconnectAnchor: null
+    });
+    this.publishRoom(room);
+  }
+
+  updateBot(connectionId: string, playerId: string, chassis: Chassis, difficulty: BotDifficulty): void {
+    const room = this.requireBotHost(connectionId);
+    this.assertBotSelection(chassis, difficulty);
+    const bot = room.players.get(playerId);
+    if (!bot?.botDifficulty) throw new DomainError('BOT_NOT_FOUND', 'Bot bulunamadı.', true);
+    bot.chassis = chassis;
+    bot.botDifficulty = difficulty;
+    bot.ready = true;
+    this.publishRoom(room);
+  }
+
+  removeBot(connectionId: string, playerId: string): void {
+    const room = this.requireBotHost(connectionId);
+    if (!room.players.get(playerId)?.botDifficulty) throw new DomainError('BOT_NOT_FOUND', 'Bot bulunamadı.', true);
+    room.players.delete(playerId);
+    this.publishRoom(room);
+  }
+
+  private requireBotHost(connectionId: string): Room {
+    const { room, player } = this.requireConnectedPlayer(connectionId);
+    if (room.hostPlayerId !== player.playerId) throw new DomainError('NOT_HOST', 'Bu işlemi yalnızca oda sahibi yapabilir.', true);
+    if (room.phase !== 'LOBBY') throw new DomainError('INVALID_PHASE', 'Bu işlem şu anda kullanılamaz.', true);
+    return room;
+  }
+
+  private assertBotSelection(chassis: Chassis, difficulty: BotDifficulty): void {
+    if (!(CHASSIS as readonly string[]).includes(chassis)) throw new DomainError('INVALID_CHASSIS', 'Gövde seçimi geçersiz.', true);
+    if (!(BOT_DIFFICULTIES as readonly string[]).includes(difficulty)) throw new DomainError('INVALID_DIFFICULTY', 'Bot zorluğu geçersiz.', true);
+  }
+
+  private assertRole(role: PlayerRole): void {
+    if (role !== 'FIGHTER' && role !== 'SPECTATOR') throw new DomainError('INVALID_ROLE', 'Katılım türü geçersiz.', true);
+  }
+
+  private assertRoleCapacity(room: Room, role: PlayerRole): void {
+    const capacity = role === 'FIGHTER' ? GAME.maxPlayers : 8;
+    if ([...room.players.values()].filter((player) => player.role === role).length >= capacity) {
+      throw new DomainError('ROOM_FULL', role === 'FIGHTER' ? 'Oyuncu kontenjanı dolu.' : 'Seyirci kontenjanı dolu.', true);
+    }
+  }
+
+  private assertFighter(player: RoomPlayer): void {
+    if (player.role !== 'FIGHTER') throw new DomainError('SPECTATOR_ACTION', 'Seyirciler oyuncu eylemlerini kullanamaz.', true);
+  }
+
   setReady(connectionId: string, ready: boolean): void {
     const { room, player } = this.requireConnectedPlayer(connectionId);
+    this.assertFighter(player);
     if (room.phase !== 'LOBBY') throw new DomainError('INVALID_PHASE', 'Bu işlem şu anda kullanılamaz.', true);
     player.ready = ready;
     this.publishRoom(room);
@@ -342,7 +435,7 @@ export class RoomManager {
     }
     if (room.settings.durationMs === settings.durationMs && room.settings.knockoutTarget === settings.knockoutTarget) return;
     room.settings = { ...settings };
-    for (const candidate of room.players.values()) candidate.ready = false;
+    for (const candidate of room.players.values()) candidate.ready = candidate.botDifficulty !== null;
     this.publishRoom(room);
   }
 
@@ -360,7 +453,7 @@ export class RoomManager {
     }
     room.network.delete(player.playerId);
     if (leavingHost) this.reassignHost(room);
-    if (room.players.size === 0) {
+    if (![...room.players.values()].some((member) => member.botDifficulty === null)) {
       if (room.match) clearPulses(room.match);
       room.combatHistory?.clear();
       this.rooms.delete(room.roomCode);
@@ -383,7 +476,7 @@ export class RoomManager {
     if (room.hostPlayerId !== player.playerId) {
       throw new DomainError('NOT_HOST', 'Bu işlemi yalnızca oda sahibi yapabilir.', true);
     }
-    const connected = [...room.players.values()].filter((candidate) => candidate.connected);
+    const connected = [...room.players.values()].filter((candidate) => candidate.role === 'FIGHTER' && candidate.connected);
     if (connected.length < GAME.minPlayers) {
       throw new DomainError('NOT_ENOUGH_PLAYERS', 'Maçı başlatmak için en az iki bağlı oyuncu gerekir.', true);
     }
@@ -391,21 +484,26 @@ export class RoomManager {
       throw new DomainError('NOT_READY', 'Tüm bağlı oyuncular hazır olmalıdır.', true);
     }
     for (const candidate of room.players.values()) {
-      candidate.ready = false;
+      candidate.ready = candidate.botDifficulty !== null;
       candidate.stats = emptyStats();
       candidate.reconnectAnchor = null;
     }
     if (room.match) clearPulses(room.match);
     room.combatHistory?.clear();
     room.matchEpoch += 1;
-    room.match = createMatchState([...room.players.values()].map((candidate) => ({
+    room.match = createMatchState([...room.players.values()].filter((candidate) => candidate.role === 'FIGHTER').map((candidate) => ({
       playerId: candidate.playerId,
       name: candidate.name,
       chassis: candidate.chassis,
       accent: candidate.accent,
       connected: candidate.connected
     })), this.deps.now(), room.settings);
+    room.bots.clear();
     for (const candidate of room.players.values()) {
+      if (candidate.botDifficulty) {
+        room.bots.set(candidate.playerId, new BotController(candidate.playerId, candidate.botDifficulty, room.matchEpoch));
+        continue;
+      }
       const runtime = room.network.get(candidate.playerId) ?? createNetworkRuntime();
       clearNetworkSamples(runtime);
       room.network.set(candidate.playerId, runtime);
@@ -429,6 +527,7 @@ export class RoomManager {
 
   applyInput(connectionId: string, input: InputFrame): void {
     const { room, player } = this.requireConnectedPlayer(connectionId);
+    this.assertFighter(player);
     if (!room.match || (room.phase !== 'COUNTDOWN' && room.phase !== 'MATCH')) {
       throw new DomainError('INVALID_PHASE', 'Bu işlem şu anda kullanılamaz.', true);
     }
@@ -586,6 +685,7 @@ export class RoomManager {
 
   setResultReady(connectionId: string, ready: boolean): void {
     const { room, player } = this.requireConnectedPlayer(connectionId);
+    this.assertFighter(player);
     if (room.phase !== 'RESULT') throw new DomainError('INVALID_PHASE', 'Bu işlem şu anda kullanılamaz.', true);
     player.ready = ready;
     this.publishRoom(room);
@@ -604,10 +704,14 @@ export class RoomManager {
   disconnect(connectionId: string): void {
     const session = this.connections.get(connectionId);
     if (!session) return;
-    this.connections.delete(connectionId);
     const room = this.rooms.get(session.roomCode);
     const player = room?.players.get(session.playerId);
     if (!room || !player) return;
+    if (player.role === 'SPECTATOR') {
+      this.leaveRoom(connectionId);
+      return;
+    }
+    this.connections.delete(connectionId);
     player.connected = false;
     player.ready = false;
     player.expiresAt = this.deps.now() + GAME.reconnectGraceMs;
@@ -641,7 +745,7 @@ export class RoomManager {
           membershipChanged = true;
         }
       }
-      if (room.players.size === 0) {
+      if (![...room.players.values()].some((member) => member.botDifficulty === null)) {
         if (room.match) clearPulses(room.match);
         room.combatHistory?.clear();
         this.rooms.delete(room.roomCode);
@@ -668,6 +772,10 @@ export class RoomManager {
           room.match.countdownRemainingMs <= SIMULATION_STEP_MS + TIMER_EPSILON_MS
           ? room.match.countdownRemainingMs
           : SIMULATION_STEP_MS;
+        if (room.bots.size > 0) {
+          const observation = snapshotMatch(room.match);
+          for (const [playerId, bot] of room.bots) room.inputs.set(playerId, bot.nextInput(observation));
+        }
         let events = [...stepMatch(room.match, room.inputs, stepDuration, room.combatHistory ?? undefined)];
         events = this.finalizeReconnectAnchors(room, events);
         room.combatHistory?.capture(room.match);
@@ -699,7 +807,7 @@ export class RoomManager {
   }
 
   private lowestUnusedAccent(room: Room): PlayerAccent {
-    const used = new Set([...room.players.values()].map((player) => player.accent));
+    const used = new Set([...room.players.values()].filter((player) => player.role === 'FIGHTER').map((player) => player.accent));
     for (let accent = 0; accent < GAME.maxPlayers; accent += 1) {
       if (!used.has(accent as PlayerAccent)) return accent as PlayerAccent;
     }
@@ -711,25 +819,25 @@ export class RoomManager {
   }
 
   private migrateHost(room: Room): void {
-    const successor = this.orderedPlayers(room).find((player) => player.connected);
+    const successor = this.orderedPlayers(room).find((player) => player.botDifficulty === null && player.connected);
     if (successor) room.hostPlayerId = successor.playerId;
   }
 
   private reassignHost(room: Room): void {
-    const successor = this.orderedPlayers(room).find((player) => player.connected) ?? this.orderedPlayers(room)[0];
+    const successor = this.orderedPlayers(room).find((player) => player.botDifficulty === null && player.connected) ?? this.orderedPlayers(room).find((player) => player.botDifficulty === null);
     if (successor) room.hostPlayerId = successor.playerId;
   }
 
   private reconcilePopulation(room: Room): boolean {
     if (!room.match || (room.phase !== 'COUNTDOWN' && room.phase !== 'MATCH')) return true;
-    const connectedCount = [...room.players.values()].filter((player) => player.connected).length;
+    const connectedCount = [...room.players.values()].filter((player) => player.role === 'FIGHTER' && player.connected).length;
     if (connectedCount >= GAME.minPlayers) {
       if (room.match.phase === 'PAUSED') this.publishMatchEvents(room, resumePausedMatch(room.match));
       return true;
     }
     const now = this.deps.now();
     const validReservations = [...room.players.values()].filter(
-      (player) => !player.connected && player.expiresAt !== null && player.expiresAt > now
+      (player) => player.role === 'FIGHTER' && !player.connected && player.expiresAt !== null && player.expiresAt > now
     );
     if (connectedCount + validReservations.length >= GAME.minPlayers) {
       const reconnectRemainingMs = Math.max(...validReservations.map((player) => player.expiresAt! - now));
@@ -810,7 +918,7 @@ export class RoomManager {
     for (const player of room.players.values()) {
       const matchPlayer = room.match.players[player.playerId];
       if (matchPlayer) player.stats = { ...matchPlayer.stats };
-      player.ready = false;
+      player.ready = player.botDifficulty !== null;
       player.reconnectAnchor = null;
       this.rememberResultPlayer(room, player);
     }
@@ -825,10 +933,11 @@ export class RoomManager {
     room.resultPlayers = null;
     room.phase = 'LOBBY';
     room.inputs.clear();
+    room.bots.clear();
     room.accumulatorMs = 0;
     room.snapshotAccumulatorMs = 0;
     for (const player of room.players.values()) {
-      player.ready = false;
+      player.ready = player.botDifficulty !== null;
       player.stats = emptyStats();
       player.reconnectAnchor = null;
     }
@@ -837,7 +946,7 @@ export class RoomManager {
   private pauseRemainingMs(room: Room): number | null {
     const now = this.deps.now();
     const deadlines = [...room.players.values()]
-      .filter((player) => !player.connected && player.expiresAt !== null && player.expiresAt > now)
+      .filter((player) => player.role === 'FIGHTER' && !player.connected && player.expiresAt !== null && player.expiresAt > now)
       .map((player) => player.expiresAt! - now);
     return deadlines.length > 0 ? Math.max(...deadlines) : null;
   }
@@ -1004,7 +1113,7 @@ export class RoomManager {
     if (!/^[0-9a-f]{64}$/iu.test(value)) {
       throw new DomainError('INVALID_RESUME_TOKEN', 'Yeniden bağlanma anahtarı geçersiz veya süresi dolmuş.', true);
     }
-    return Uint8Array.from(Buffer.from(value, 'hex'));
+    return Uint8Array.from(value.match(/.{2}/g)!, byte => Number.parseInt(byte, 16));
   }
 
   private requireConnectedPlayer(connectionId: string): { room: Room; player: RoomPlayer } {
@@ -1018,9 +1127,11 @@ export class RoomManager {
   }
 
   private rememberResultPlayer(room: Room, player: RoomPlayer): void {
-    if (!room.resultPlayers || room.resultPlayers.has(player.playerId)) return;
+    if (player.role !== 'FIGHTER' || !room.resultPlayers || room.resultPlayers.has(player.playerId)) return;
     room.resultPlayers.set(player.playerId, {
       playerId: player.playerId,
+      role: player.role,
+      botDifficulty: player.botDifficulty,
       name: player.name,
       chassis: player.chassis,
       accent: player.accent,
@@ -1042,6 +1153,8 @@ export class RoomManager {
         const livePlayer = room.players.get(resultPlayer.playerId);
         if (resultPlayer.left || !livePlayer) {
           return {
+            role: resultPlayer.role,
+            botDifficulty: resultPlayer.botDifficulty,
             playerId: resultPlayer.playerId,
             name: resultPlayer.name,
             chassis: resultPlayer.chassis,
@@ -1054,6 +1167,8 @@ export class RoomManager {
           };
         }
         return {
+          role: resultPlayer.role,
+          botDifficulty: resultPlayer.botDifficulty,
           playerId: resultPlayer.playerId,
           name: resultPlayer.name,
           chassis: resultPlayer.chassis,
@@ -1088,6 +1203,8 @@ export class RoomManager {
         result,
         settings: { ...room.settings },
         players: this.orderedPlayers(room).map((player) => ({
+          role: player.role,
+          botDifficulty: player.botDifficulty,
           playerId: player.playerId,
           name: player.name,
           chassis: player.chassis,
@@ -1107,6 +1224,7 @@ export class RoomManager {
     const now = this.deps.now();
     const network = Object.fromEntries(
       Object.keys(room.match!.players)
+        .filter((playerId) => room.players.get(playerId)?.botDifficulty === null)
         .sort()
         .map((playerId) => [playerId, networkStatus(room.network.get(playerId) ?? createNetworkRuntime(), now)])
     );

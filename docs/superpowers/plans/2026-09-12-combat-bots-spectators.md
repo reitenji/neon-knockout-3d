@@ -1,6 +1,6 @@
 # Combat feel, eight bots and spectators
 
-> **For agentic workers:** Use superpowers:subagent-driven-development task by task. This ExecPlan follows /Users/serkances/.codex/PLANS.md and is self-contained; update Progress and Outcomes throughout execution.
+> Execute inline with superpowers:executing-plans under the current user agreement. This ExecPlan follows /Users/serkances/.codex/PLANS.md and is self-contained; update Progress and Outcomes throughout execution.
 
 ## Purpose and approved scope
 
@@ -9,10 +9,10 @@ The user finds the animations and combat weak and has explicitly asked to improv
 ## Progress
 
 - [x] Inspect current source and confirm clean main301f155; create feature/combat-bots-spectators.
-- [ ] Improve and verify shared movement/combo/edge recovery mechanics.
-- [ ] Improve distinct full-body animations, contact feedback and directional recoil.
-- [ ] Add authoritative bots and spectator room lifecycle after mechanics contract settles.
-- [ ] Add lobby management, spectator rendering and result flows.
+- [x] Improve and verify shared movement/combo/edge recovery mechanics.
+- [x] Improve distinct full-body animations, contact feedback and directional recoil.
+- [x] Add authoritative bots and spectator room lifecycle after mechanics contract settles.
+- [x] Add lobby management, spectator rendering and result flows.
 - [ ] Run integrated tests and real browser solo/watch/mixed flows; review and fix findings.
 - [ ] Publish verified changes and restart the new game host; report actual acceptance limits.
 
@@ -61,3 +61,8 @@ Mechanics first is the user's explicit order. Rendering improvements can run alo
 ## Outcomes & Retrospective
 
 In progress. Completion requires visible combat improvements and real solo/bot/spectator journeys, not test counts alone. Any remaining subjective quality limits and unperformed physical-device checks must be stated explicitly.
+
+
+### Later hosting direction
+
+The user selected Sites and then a room-creator browser host on the same Wi-Fi/LAN. The browser-host Sites ExecPlan records that implementation and supersedes this plan's Node service restart as the requested publication target. Preserve the separate Node LAN target and the original game checkout. Eight-bot/two-spectator real-browser match and identical result/rematch acceptance passed through local Sites signaling. Shared simulation, capacity, bot authority, late join, lifecycle and natural bot results are covered by the expanded tests. Publication remains a distinct step.

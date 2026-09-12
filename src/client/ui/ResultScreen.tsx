@@ -35,7 +35,7 @@ export function ResultScreen({ state, onToggleReady, onStart, onReturnToLobby, c
   const isHost = self?.playerId === room.hostPlayerId;
   const resultPlayers = room.result?.players ?? [];
   const winner = resultPlayers.find((player) => player.playerId === room.result?.winnerPlayerId) ?? null;
-  const anyReady = room.players.some((player) => player.connected && player.ready);
+  const anyReady = room.players.some((player) => player.connected && player.role === 'FIGHTER' && player.botDifficulty === null && player.ready);
   const anyPending = state.pendingAction !== null;
   const resultError = ['result-ready', 'start', 'return-lobby'].includes(state.errorAction ?? '') ? state.lastError : null;
 
@@ -49,6 +49,7 @@ export function ResultScreen({ state, onToggleReady, onStart, onReturnToLobby, c
       <div className="result-frame tech-frame">
         <header className="result-heading">
           <p className="eyebrow">MAÇ SONUCU</p>
+          {self?.role === 'SPECTATOR' ? <p>Seyirci</p> : null}
           <h1 id="result-title">{winner ? `${winner.name} Kazandı` : 'Kazanan Yok'}</h1>
         </header>
 
@@ -75,7 +76,7 @@ export function ResultScreen({ state, onToggleReady, onStart, onReturnToLobby, c
         {resultError ? <p className="inline-error" role="alert">{resultError.message}</p> : null}
 
         <footer className="result-actions">
-          {self?.connected ? (
+          {self?.connected && self.role === 'FIGHTER' ? (
             <button
               className="command-button command-button--cyan focus-ring"
               type="button"

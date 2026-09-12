@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import { CharacterPreview } from '../game/three/CharacterPreview.js';
-import { CHASSIS, type Chassis, type RoomPlayer } from '../../shared/model.js';
-import { ACCENTS } from '../../shared/constants.js';
+import { CHASSIS, type BotDifficulty, type PlayerRole, type Chassis, type RoomPlayer } from '../../shared/model.js';
+import { ACCENTS, GAME } from '../../shared/constants.js';
 import {
   KNOCKOUT_TARGET_OPTIONS,
   MATCH_DURATION_OPTIONS,
@@ -13,6 +14,10 @@ import { LanSharePanel } from './LanSharePanel.js';
 
 type LobbyScreenProps = Readonly<{
   state: ClientState;
+  onSetRole: (role: PlayerRole) => Promise<void>;
+  onAddBot: (chassis: Chassis, difficulty: BotDifficulty) => Promise<void>;
+  onUpdateBot: (playerId: string, chassis: Chassis, difficulty: BotDifficulty) => Promise<void>;
+  onRemoveBot: (playerId: string) => Promise<void>;
   onSetChassis: (chassis: Chassis) => Promise<void>;
   onToggleReady: (ready: boolean) => Promise<void>;
   onSetRoomSettings: (settings: RoomSettings) => Promise<void>;
@@ -39,7 +44,7 @@ function ChassisSilhouette({ chassis }: Readonly<{ chassis: Chassis }>) {
 }
 
 function PlayerRow({ player, hostPlayerId }: Readonly<{ player: RoomPlayer; hostPlayerId: string }>) {
-  const status = player.connected ? (player.ready ? 'Hazır' : 'Bekliyor') : 'Bağlantı bekleniyor';
+  const status = player.connected ? (player.role === 'SPECTATOR' ? 'Seyirci' : player.ready ? 'Hazır' : 'Bekliyor') : 'Bağlantı bekleniyor';
   const statusClass = !player.connected ? 'is-disconnected' : player.ready ? 'is-ready' : 'is-waiting';
   return (
     <li className={`player-row ${statusClass}`}>
@@ -48,26 +53,37 @@ function PlayerRow({ player, hostPlayerId }: Readonly<{ player: RoomPlayer; host
         <strong>{player.name}</strong>
         {player.playerId === hostPlayerId ? <span className="host-crown" role="img" aria-label="Oda sahibi">♛</span> : null}
       </span>
-      <span className="player-row__chassis">{player.chassis}</span>
+      <span className="player-row__chassis">{player.role === 'FIGHTER' ? player.chassis : '—'}{player.botDifficulty ? ` · Bot · ${DIFFICULTY_LABELS[player.botDifficulty]}` : ''}</span>
       <span className="player-row__status"><span className="status-light" aria-hidden="true" />{status}</span>
     </li>
   );
 }
 
+const DIFFICULTY_LABELS: Record<BotDifficulty, string> = { EASY: 'Kolay', NORMAL: 'Normal', HARD: 'Zor' };
+
 export function LobbyScreen({
   state,
+  onSetRole,
+  onAddBot,
+  onUpdateBot,
+  onRemoveBot,
   onSetChassis,
   onToggleReady,
   onSetRoomSettings,
   onStart,
   onCopyRoomCode
 }: LobbyScreenProps) {
+  const [botChassis, setBotChassis] = useState<Chassis>('RIFT');
+  const [botDifficulty, setBotDifficulty] = useState<BotDifficulty>('NORMAL');
   if (!state.room) return null;
   const { room } = state;
   const selfPlayer = selectSelfPlayer(state);
   const isHost = selfPlayer?.playerId === room.hostPlayerId;
+  const spectator = selfPlayer?.role === 'SPECTATOR';
+  const fighters = room.players.filter((player) => player.role === 'FIGHTER');
+  const spectators = room.players.filter((player) => player.role === 'SPECTATOR');
   const anyPending = state.pendingAction !== null;
-  const lobbyError = ['chassis', 'ready', 'settings', 'start'].includes(state.errorAction ?? '')
+  const lobbyError = ['role', 'bot-add', 'bot-update', 'bot-remove', 'chassis', 'ready', 'settings', 'start'].includes(state.errorAction ?? '')
     ? state.lastError
     : null;
 
@@ -93,9 +109,22 @@ export function LobbyScreen({
               </span>
             </button>
           </div>
-          {isHost ? <LanSharePanel roomCode={room.roomCode} /> : null}
+          {isHost ? (import.meta.env.MODE === 'sites' ? <aside className="browser-host-share" aria-label="Oda daveti">
+            <a href={`${window.location.origin}/room/${room.roomCode}`}>Davet bağlantısı</a>
+            <span>Aynı Wi-Fi/LAN ağına bağlanın. Oda sahibinin bu sekmesi açık ve etkin kalmalı.</span>
+          </aside> : <LanSharePanel roomCode={room.roomCode} />) : null}
         </header>
 
+        <label className="room-settings__field lobby-role">
+          <span>Katılım</span>
+          <select className="focus-ring" value={selfPlayer?.role ?? 'FIGHTER'} disabled={!selfPlayer || anyPending}
+            onChange={(event) => void onSetRole(event.currentTarget.value as PlayerRole)}>
+            <option value="FIGHTER" disabled={spectator && fighters.length >= GAME.maxPlayers}>Oyuncu</option>
+            <option value="SPECTATOR" disabled={!spectator && spectators.length >= 8}>Seyirci</option>
+          </select>
+        </label>
+
+        {!spectator ? <>
         <CharacterPreview selected={selfPlayer?.chassis ?? 'RIFT'} />
 
         <fieldset className="chassis-picker" disabled={!selfPlayer || anyPending}>
@@ -120,6 +149,8 @@ export function LobbyScreen({
             })}
           </div>
         </fieldset>
+
+        </> : null}
 
         <fieldset
           className="room-settings"
@@ -159,16 +190,64 @@ export function LobbyScreen({
           </div>
         </fieldset>
 
-        <ul className="player-list player-list--ffa" aria-label="Oyuncular">
-          {room.players.map((candidate) => <PlayerRow key={candidate.playerId} player={candidate} hostPlayerId={room.hostPlayerId} />)}
-        </ul>
+        {isHost ? (
+          <fieldset className="room-settings bot-manager" disabled={anyPending}>
+            <legend>Botlar</legend>
+            <div className="bot-manager__add">
+              <label className="room-settings__field"><span>Bot gövdesi</span>
+                <select className="focus-ring" value={botChassis} onChange={(event) => setBotChassis(event.currentTarget.value as Chassis)}>
+                  {CHASSIS.map((chassis) => <option key={chassis}>{chassis}</option>)}
+                </select>
+              </label>
+              <label className="room-settings__field"><span>Bot zorluğu</span>
+                <select className="focus-ring" value={botDifficulty} onChange={(event) => setBotDifficulty(event.currentTarget.value as BotDifficulty)}>
+                  {Object.entries(DIFFICULTY_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                </select>
+              </label>
+              <button className="chrome-button focus-ring" type="button" disabled={anyPending || fighters.length >= GAME.maxPlayers}
+                aria-busy={state.pendingAction === 'bot-add'} onClick={() => void onAddBot(botChassis, botDifficulty)}>Bot Ekle</button>
+            </div>
+          </fieldset>
+        ) : null}
+
+        <section className="lobby-roster" aria-label="Oda katılımcıları">
+          <p className="lobby-roster__count">Oyuncular {fighters.length}/{GAME.maxPlayers} · Seyirciler {spectators.length}/8</p>
+          <ul className="player-list player-list--ffa" aria-label="Oyuncular">
+            {fighters.map((candidate) => (
+              <li key={candidate.playerId} className="lobby-roster__entry">
+                <ul className="lobby-roster__identity"><PlayerRow player={candidate} hostPlayerId={room.hostPlayerId} /></ul>
+                {isHost && candidate.botDifficulty ? (
+                  <div className="bot-manager__edit">
+                    <label className="room-settings__field"><span>{candidate.name} gövdesi</span>
+                      <select className="focus-ring" disabled={anyPending} value={candidate.chassis}
+                        onChange={(event) => void onUpdateBot(candidate.playerId, event.currentTarget.value as Chassis, candidate.botDifficulty!)}>
+                        {CHASSIS.map((chassis) => <option key={chassis}>{chassis}</option>)}
+                      </select>
+                    </label>
+                    <label className="room-settings__field"><span>{candidate.name} zorluğu</span>
+                      <select className="focus-ring" disabled={anyPending} value={candidate.botDifficulty}
+                        onChange={(event) => void onUpdateBot(candidate.playerId, candidate.chassis, event.currentTarget.value as BotDifficulty)}>
+                        {Object.entries(DIFFICULTY_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                      </select>
+                    </label>
+                    <button className="chrome-button focus-ring" type="button" disabled={anyPending}
+                      aria-label={`${candidate.name} botunu kaldır`} onClick={() => void onRemoveBot(candidate.playerId)}>Kaldır</button>
+                  </div>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+          {spectators.length ? <ul className="player-list" aria-label="Seyirciler">
+            {spectators.map((candidate) => <PlayerRow key={candidate.playerId} player={candidate} hostPlayerId={room.hostPlayerId} />)}
+          </ul> : null}
+        </section>
 
         <div className="lobby-feedback">
           {lobbyError ? <p className="inline-error" role="alert">{lobbyError.message}</p> : null}
         </div>
 
         <footer className="lobby-actions">
-          {selfPlayer ? (
+          {selfPlayer && !spectator ? (
             <button
               className="command-button command-button--cyan focus-ring"
               type="button"

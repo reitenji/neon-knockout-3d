@@ -8,6 +8,7 @@ import { LobbyScreen } from './LobbyScreen.js';
 
 function player(overrides: Partial<RoomPlayer> = {}): RoomPlayer {
   return {
+    role: 'FIGHTER', botDifficulty: null,
     playerId: 'player-1', name: 'Ada', chassis: 'RIFT', accent: 0, ready: false, connected: true,
     reconnectRemainingMs: null,
     stats: { knockouts: 0, falls: 0, landedHits: 0, completedAttacks: 0 },
@@ -18,7 +19,7 @@ function room(overrides: Partial<RoomState> = {}): RoomState {
   return {
     roomCode: 'AB2Z', phase: 'LOBBY', hostPlayerId: 'player-1', pauseRemainingMs: null, result: null,
     settings: DEFAULT_ROOM_SETTINGS,
-    players: [player(), player({ playerId: 'player-2', name: 'Linus', chassis: 'BASTION', accent: 1, ready: true })],
+    players: [player(), player({ role: 'FIGHTER', botDifficulty: null, playerId: 'player-2', name: 'Linus', chassis: 'BASTION', accent: 1, ready: true })],
     ...overrides
   };
 }
@@ -34,6 +35,10 @@ function renderLobby(clientState = state(), handlers: Partial<Parameters<typeof 
   vi.stubGlobal('fetch', () => new Promise<Response>(() => undefined));
   const props: Parameters<typeof LobbyScreen>[0] = {
     state: clientState,
+    onSetRole: vi.fn(async () => undefined),
+    onAddBot: vi.fn(async () => undefined),
+    onUpdateBot: vi.fn(async () => undefined),
+    onRemoveBot: vi.fn(async () => undefined),
     onSetChassis: vi.fn(async () => undefined),
     onToggleReady: vi.fn(async () => undefined),
     onSetRoomSettings: vi.fn(async () => undefined),

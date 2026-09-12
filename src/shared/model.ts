@@ -5,6 +5,10 @@ export const CHASSIS = ['RIFT', 'BASTION', 'PULSE', 'WRAITH'] as const;
 
 export type Chassis = (typeof CHASSIS)[number];
 
+export const BOT_DIFFICULTIES = ['EASY', 'NORMAL', 'HARD'] as const;
+export type BotDifficulty = (typeof BOT_DIFFICULTIES)[number];
+export type PlayerRole = 'FIGHTER' | 'SPECTATOR';
+
 export type PlayerAccent = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
 export type RoomPhase = 'LOBBY' | 'COUNTDOWN' | 'MATCH' | 'RESULT';
@@ -43,6 +47,8 @@ export type PlayerStats = Readonly<{
 }>;
 
 export type RoomPlayer = Readonly<{
+  role: PlayerRole;
+  botDifficulty: BotDifficulty | null;
   playerId: string;
   name: string;
   chassis: Chassis;

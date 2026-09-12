@@ -10,6 +10,8 @@ type ThreeArenaProps = Readonly<{
   bridge: GamePresentationBridge;
   localPlayerId: string;
   createGame?: NeonGameFactory;
+  spectator?: boolean;
+  botPlayerIds?: readonly string[];
   reducedMotion?: boolean;
 }>;
 
@@ -17,14 +19,20 @@ export function ThreeArena({
   bridge,
   localPlayerId,
   createGame,
+  spectator = false,
+  botPlayerIds,
   reducedMotion
 }: ThreeArenaProps) {
   const [renderError, setRenderError] = useState(false);
   const parentRef = useRef<HTMLDivElement>(null);
   const touchInput = useMemo(() => new TouchInputSource(), []);
   const scopedBridge = useMemo(
-    () => scopeBridgeToPlayer(bridge, localPlayerId, touchInput),
-    [bridge, localPlayerId, touchInput]
+    () => {
+      const scoped = scopeBridgeToPlayer(bridge, localPlayerId, touchInput);
+      if (spectator) scoped.sendInput = () => undefined;
+      return scoped;
+    },
+    [bridge, localPlayerId, touchInput, spectator]
   );
   const prefersReducedMotion = reducedMotion ?? (
     window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
@@ -58,8 +66,8 @@ export function ThreeArena({
         onContextMenu={(event) => event.preventDefault()}
       />
       {renderError ? <p className="render-error" role="alert">3D sahne açılamadı. Tarayıcıda donanım hızlandırmayı etkinleştirip sayfayı yenile.</p> : null}
-      <MatchHud bridge={scopedBridge} localPlayerId={localPlayerId} />
-      <TouchControls source={touchInput} abilityName={FIGHTERS[bridge.getSnapshot()?.players.find((player) => player.playerId === localPlayerId)?.chassis ?? 'RIFT'].abilityName} />
+      <MatchHud bridge={scopedBridge} localPlayerId={localPlayerId} spectator={spectator} botPlayerIds={botPlayerIds} />
+      {!spectator ? <TouchControls source={touchInput} abilityName={FIGHTERS[bridge.getSnapshot()?.players.find((player) => player.playerId === localPlayerId)?.chassis ?? 'RIFT'].abilityName} /> : null}
     </section>
   );
 }

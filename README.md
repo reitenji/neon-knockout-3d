@@ -98,7 +98,7 @@ npm run lint
 npm run typecheck
 npm test
 npm run test:load
-npm run build
+npm run build:lan
 npm run test:e2e
 npm run test:e2e:webkit
 npm run verify
@@ -115,3 +115,16 @@ The Three.js renderer lives in `src/client/game/three/`. Fighter geometry uses a
 The initial release validates same-host independent browser clients, WebRTC/Socket.IO paths, touch controls and an eight-player scene. This is not a claim of testing a separate physical phone or laptop. Use the host's printed LAN address on a second device for physical Wi-Fi acceptance.
 
 The new game defaults to TCP **4175** and WebRTC UDP **53140–53171**, separate from the original game's default ports. `PORT`, `GAME_WEBRTC_UDP_PORT_MIN`, and `GAME_WEBRTC_UDP_PORT_MAX` can override these when needed. See `docs/acceptance-3d.md` for the recorded checks.
+
+
+## Sites: browser-hosted Wi-Fi/LAN play
+
+`npm run build` (or `npm run build:sites`) produces the Sites Worker and browser assets. `npm run build:lan` produces the separate Node server; use `npm run lan` to build and start that mode. Do not use `npm start` after a Sites build. Sites connection-mailbox migrations live in `drizzle/`, with the logical D1 binding in `.openai/hosting.json`.
+
+On Sites, the room creator's browser runs the shared physics and bots. Other players join through a direct WebRTC data channel on the same Wi-Fi/LAN; there is no STUN/TURN relay or externally hosted game server. Sites supplies the page and a temporary connection mailbox. Internet access is needed to load the site and establish rooms. An isolated guest network can prevent peers from connecting even when they use the same Wi-Fi name. Keep the host tab open and active; closing or reloading it ends the room. A disconnected fighter can refresh and resume while the host is present and the existing reconnect grace permits it. Spectators rejoin by room code.
+
+The lobby supports up to eight fighters in total (humans plus bots), plus eight human spectators. The host can choose Spectator and watch eight bots. Bot chassis and Easy/Normal/Hard difficulty can be changed in the lobby; bots use the same simulation inputs and cooldown rules, with no AI API. Results and rematches preserve these roles.
+
+For a local Sites-build smoke, run `npm run build:sites` followed by `npm run preview:sites` and open the printed loopback URL in two independent browser contexts. This preview uses Node's built-in SQLite and needs Node 22.13+ (verified on Node 25); production runs the Worker against Sites D1. A same-host test is not physical second-device acceptance.
+
+During the current public beta, Sites usage is included within plan-specific limits; reaching a limit can restrict publication or storage. This project provisions no paid external host, relay, custom domain or AI API. See [OpenAI's Sites beta limits](https://help.openai.com/en/articles/20001339). This is not a guarantee of unlimited or permanently free hosting.

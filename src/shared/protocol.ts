@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { CHASSIS } from './model.js';
+import { BOT_DIFFICULTIES, CHASSIS } from './model.js';
 import {
   type MatchEventPublication,
   type MatchSnapshotPublication,
@@ -20,6 +20,8 @@ import type {
 } from './model.js';
 import { normalizeRoomCode } from './names.js';
 
+const roleSchema = z.enum(['FIGHTER', 'SPECTATOR']);
+const botSelection = { chassis: z.enum(CHASSIS), difficulty: z.enum(BOT_DIFFICULTIES) };
 const chassisSchema = z.enum(CHASSIS);
 const emptyPayloadSchema = z.object({}).strict();
 const durationSchema = z.union(MATCH_DURATION_OPTIONS.map((value) => z.literal(value)) as [
@@ -43,10 +45,14 @@ const roomCodeSchema = z.string().transform((value, context) => {
 });
 
 export const roomCreateSchema = z.object({ name: z.string() }).strict();
-export const roomJoinSchema = z.object({ name: z.string(), roomCode: roomCodeSchema }).strict();
+export const roomJoinSchema = z.object({ name: z.string(), roomCode: roomCodeSchema, role: roleSchema.default('FIGHTER') }).strict();
 export const roomLeaveSchema = emptyPayloadSchema;
 export const sessionResumeSchema = z.object({ roomCode: roomCodeSchema, resumeToken: z.string() }).strict();
 export const lobbyChassisSchema = z.object({ chassis: chassisSchema }).strict();
+export const lobbyRoleSchema = z.object({ role: roleSchema }).strict();
+export const lobbyBotAddSchema = z.object(botSelection).strict();
+export const lobbyBotUpdateSchema = z.object({ playerId: z.string().min(1), ...botSelection }).strict();
+export const lobbyBotRemoveSchema = z.object({ playerId: z.string().min(1) }).strict();
 export const lobbyReadySchema = z.object({ ready: z.boolean() }).strict();
 export const lobbySettingsSchema = z.object({
   durationMs: durationSchema,
@@ -59,10 +65,14 @@ export const resultReadySchema = z.object({ ready: z.boolean() }).strict();
 export const resultLobbySchema = emptyPayloadSchema;
 
 export type RoomCreatePayload = z.infer<typeof roomCreateSchema>;
-export type RoomJoinPayload = z.infer<typeof roomJoinSchema>;
+export type RoomJoinPayload = z.input<typeof roomJoinSchema>;
 export type RoomLeavePayload = z.infer<typeof roomLeaveSchema>;
 export type SessionResumePayload = z.infer<typeof sessionResumeSchema>;
 export type LobbyChassisPayload = Readonly<{ chassis: Chassis }>;
+export type LobbyRolePayload = z.infer<typeof lobbyRoleSchema>;
+export type LobbyBotAddPayload = z.infer<typeof lobbyBotAddSchema>;
+export type LobbyBotUpdatePayload = z.infer<typeof lobbyBotUpdateSchema>;
+export type LobbyBotRemovePayload = z.infer<typeof lobbyBotRemoveSchema>;
 export type LobbyReadyPayload = z.infer<typeof lobbyReadySchema>;
 export type LobbySettingsPayload = z.infer<typeof lobbySettingsSchema>;
 export type MatchInputPayload = InputFrame;
@@ -76,6 +86,10 @@ export interface ClientToServerEvents {
   'room:leave': (payload: RoomLeavePayload, acknowledge: (ack: Ack<null>) => void) => void;
   'session:resume': (payload: SessionResumePayload, acknowledge: (ack: Ack<SessionWelcome>) => void) => void;
   'lobby:chassis': (payload: LobbyChassisPayload, acknowledge: (ack: Ack<null>) => void) => void;
+  'lobby:role': (payload: LobbyRolePayload, acknowledge: (ack: Ack<null>) => void) => void;
+  'lobby:bot:add': (payload: LobbyBotAddPayload, acknowledge: (ack: Ack<null>) => void) => void;
+  'lobby:bot:update': (payload: LobbyBotUpdatePayload, acknowledge: (ack: Ack<null>) => void) => void;
+  'lobby:bot:remove': (payload: LobbyBotRemovePayload, acknowledge: (ack: Ack<null>) => void) => void;
   'lobby:ready': (payload: LobbyReadyPayload, acknowledge: (ack: Ack<null>) => void) => void;
   'lobby:settings': (payload: LobbySettingsPayload, acknowledge: (ack: Ack<null>) => void) => void;
   'match:start': (payload: z.infer<typeof matchStartSchema>, acknowledge: (ack: Ack<null>) => void) => void;

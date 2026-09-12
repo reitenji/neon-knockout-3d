@@ -1,5 +1,5 @@
 import type {
-  Ack, Chassis, GameEvent, InputFrame, MatchSnapshot, RoomPlayer, RoomState, ServerError, SessionWelcome
+  Ack, BotDifficulty, PlayerRole, Chassis, GameEvent, InputFrame, MatchSnapshot, RoomPlayer, RoomState, ServerError, SessionWelcome
 } from '../../shared/model.js';
 import type { RoomSettings } from '../../shared/roomSettings.js';
 import { normalizePlayerName, normalizeRoomCode } from '../../shared/names.js';
@@ -8,7 +8,7 @@ import type { GameClient, GameClientConnectionState } from '../network/GameClien
 export type GameScreen = 'LANDING' | 'LOBBY' | 'MATCH' | 'RESULT';
 export type PendingAction =
   | 'create-room' | 'join-room' | 'resume' | 'chassis' | 'ready' | 'settings' | 'leave-room'
-  | 'start' | 'result-ready' | 'return-lobby' | null;
+  | 'role' | 'bot-add' | 'bot-update' | 'bot-remove' | 'start' | 'result-ready' | 'return-lobby' | null;
 export type ErrorAction = Exclude<PendingAction, null> | 'server' | null;
 export type CopyFeedback = 'idle' | 'copied' | 'failed';
 
@@ -40,7 +40,11 @@ export interface GameStore {
   actions: {
     connect(): void;
     createRoom(name: string): Promise<void>;
-    joinRoom(name: string, code: string): Promise<void>;
+    joinRoom(name: string, code: string, role?: PlayerRole): Promise<void>;
+    setRole(role: PlayerRole): Promise<void>;
+    addBot(chassis: Chassis, difficulty: BotDifficulty): Promise<void>;
+    updateBot(playerId: string, chassis: Chassis, difficulty: BotDifficulty): Promise<void>;
+    removeBot(playerId: string): Promise<void>;
     setChassis(chassis: Chassis): Promise<void>;
     setReady(ready: boolean): Promise<void>;
     setRoomSettings(settings: RoomSettings): Promise<void>;
@@ -344,7 +348,7 @@ export function createGameStore({ client, storage, clipboard, getPreferredResume
       } catch { if (!disposed) setUnexpectedFailure('create-room'); }
       finally { finishAcknowledgement('create-room'); }
     },
-    async joinRoom(name: string, code: string): Promise<void> {
+    async joinRoom(name: string, code: string, role?: PlayerRole): Promise<void> {
       if (state.pendingAction !== null) return;
       const normalizedName = normalizeNameOrNull(name);
       if (!normalizedName) { setFailure('join-room', invalidNameError()); return; }
@@ -352,13 +356,17 @@ export function createGameStore({ client, storage, clipboard, getPreferredResume
       if (!normalizedCode) { setFailure('join-room', invalidRoomCodeError()); return; }
       if (!beginAcknowledgement('join-room')) return;
       try {
-        const acknowledgement = await client.joinRoom(normalizedName, normalizedCode);
+        const acknowledgement = await (role ? client.joinRoom(normalizedName, normalizedCode, role) : client.joinRoom(normalizedName, normalizedCode));
         if (disposed) return;
         if (!acknowledgement.ok) { setFailure('join-room', acknowledgement.error); return; }
         persistWelcome(acknowledgement.data);
       } catch { if (!disposed) setUnexpectedFailure('join-room'); }
       finally { finishAcknowledgement('join-room'); }
     },
+    setRole(role): Promise<void> { return runAcknowledgedAction('role', () => client.setRole(role)); },
+    addBot(chassis, difficulty): Promise<void> { return runAcknowledgedAction('bot-add', () => client.addBot(chassis, difficulty)); },
+    updateBot(playerId, chassis, difficulty): Promise<void> { return runAcknowledgedAction('bot-update', () => client.updateBot(playerId, chassis, difficulty)); },
+    removeBot(playerId): Promise<void> { return runAcknowledgedAction('bot-remove', () => client.removeBot(playerId)); },
     setChassis(chassis): Promise<void> { return runAcknowledgedAction('chassis', () => client.setChassis(chassis)); },
     setReady(ready): Promise<void> { return runAcknowledgedAction('ready', () => client.setReady(ready)); },
     setRoomSettings(settings): Promise<void> { return runAcknowledgedAction('settings', () => client.setRoomSettings(settings)); },
@@ -415,7 +423,7 @@ export function createGameStore({ client, storage, clipboard, getPreferredResume
     subscribe(listener) { if (disposed) return () => undefined; listeners.add(listener); return once(() => listeners.delete(listener)); },
     subscribeMatch(listener) { if (disposed) return () => undefined; matchListeners.add(listener); return once(() => matchListeners.delete(listener)); },
     subscribeGameEvent(listener) { if (disposed) return () => undefined; gameEventListeners.add(listener); return once(() => gameEventListeners.delete(listener)); },
-    sendInput(frame) { if (!disposed) client.sendInput(frame); },
+    sendInput(frame) { if (!disposed && selectSelfPlayer(state)?.role !== 'SPECTATOR') client.sendInput(frame); },
     dispose() {
       if (disposed) return;
       disposed = true;
@@ -472,6 +480,6 @@ export function selectSelfPlayer(state: ClientState): RoomPlayer | null {
 
 export function selectCanStart(state: ClientState): boolean {
   if (!state.room || (state.room.phase !== 'LOBBY' && state.room.phase !== 'RESULT')) return false;
-  const connected = state.room.players.filter((player) => player.connected);
-  return connected.length >= 2 && connected.every((player) => player.ready);
+  const connected = state.room.players.filter((player) => player.connected && player.role === 'FIGHTER');
+  return connected.length >= 2 && connected.every((player) => player.botDifficulty !== null || player.ready);
 }
