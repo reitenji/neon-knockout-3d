@@ -1,7 +1,7 @@
 import type { GameClient, GameClientConnectionState, GameClientEvents } from './GameClient.js';
 import type { Ack, SessionWelcome, MatchSnapshot } from '../../shared/model.js';
 import { HostRuntime, LOCAL_HOST, requestSchema, type HostCommand, type HostEvent } from './browserHost/HostRuntime.js';
-import { description, randomToken, signal, waitForChannel, sendPeer } from './browserHost/PeerLink.js';
+import { createDirectPeer, description, randomToken, signal, waitForChannel, sendPeer } from './browserHost/PeerLink.js';
 
 const failed=(message:string):Ack<never>=>({ok:false,error:{code:'HOST_CONNECTION_FAILED',message,recoverable:true}});
 const asError=(error:unknown)=>error instanceof Error?error.message:'Oda bağlantısı kurulamadı.';
@@ -44,7 +44,7 @@ export function createBrowserHostClient():GameClient {
   const action=async(name:HostCommand,payload:unknown):Promise<Ack<null>>=>await command(name,payload) as Ack<null>;
   const accept=async(id:string,offer:string,current:number)=>{
     if(!runtime||peers.has(id)||peers.size>=15)return;
-    const peer=new RTCPeerConnection({iceServers:[]});
+    const peer=createDirectPeer();
     const entry={peer,channel:null as RTCDataChannel|null};peers.set(id,entry);
     const expire=window.setTimeout(()=>{if(entry.channel?.readyState!=='open'){peers.delete(id);peer.close();}},20000);
     peer.ondatachannel=event=>{
@@ -85,7 +85,7 @@ export function createBrowserHostClient():GameClient {
   };
   const connectGuest=async(code:string)=>{
     const current=generation;
-    const peer=new RTCPeerConnection({iceServers:[]});guestPeer=peer;
+    const peer=createDirectPeer();guestPeer=peer;
     const channel=peer.createDataChannel('game',{ordered:true});guestChannel=channel;
     channel.onmessage=message=>{
       if(typeof message.data!=='string'||message.data.length>150000)return;
@@ -112,7 +112,7 @@ export function createBrowserHostClient():GameClient {
       if(answer.answer){await peer.setRemoteDescription({type:'answer',sdp:answer.answer});await waitForChannel(channel);roomCode=code;connection('connected');return;}
       await new Promise(resolve=>window.setTimeout(resolve,500));
     }
-    throw new Error('Oda sahibine ulaşılamadı. Host sekmesinin açık ve aynı Wi-Fi/LAN ağında olduğundan emin ol.');
+    throw new Error('Oda sahibine ulaşılamadı. Host sekmesi açık kalmalı; farklı ağlardan bağlantı bu denemede her zaman kurulamayabilir.');
   };
   const join=async(code:string,nameOrToken:string,resume:boolean,role?:'FIGHTER'|'SPECTATOR'):Promise<Ack<SessionWelcome>>=>{
     clear();joiningEvents=[];connection('connecting');

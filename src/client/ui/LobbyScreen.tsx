@@ -111,7 +111,7 @@ export function LobbyScreen({
           </div>
           {isHost ? (import.meta.env.MODE === 'sites' ? <aside className="browser-host-share" aria-label="Oda daveti">
             <a href={`${window.location.origin}/room/${room.roomCode}`}>Davet bağlantısı</a>
-            <span>Aynı Wi-Fi/LAN ağına bağlanın. Oda sahibinin bu sekmesi açık ve etkin kalmalı.</span>
+            <span>İnternet bağlantısı denemesi: farklı ağlardan katılabilirsiniz; bazı modemlerde ve mobil ağlarda bağlantı kurulamayabilir. Oda sahibinin bu sekmesi açık ve etkin kalmalı.</span>
           </aside> : <LanSharePanel roomCode={room.roomCode} />) : null}
         </header>
 

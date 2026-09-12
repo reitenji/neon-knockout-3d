@@ -15,7 +15,7 @@ function ActionMark({ pending, idle }: Readonly<{ pending: boolean; idle: string
 }
 
 function networkMessage(): string {
-  if (import.meta.env.MODE === 'sites') return 'Odayı kuran kişi maça ev sahipliği yapar. Aynı Wi-Fi/LAN ağını kullanın; host sekmesi kapanırsa maç biter.';
+  if (import.meta.env.MODE === 'sites') return 'İnternet bağlantısı denemesi: farklı ağlardan katılabilirsiniz; her ağda çalışmayabilir. Odayı kuran kişinin sekmesi kapanırsa maç biter.';
   const loopbackHosts = new Set(['localhost', '127.0.0.1']);
   if (loopbackHosts.has(window.location.hostname)) {
     return 'Misafirler localhost yerine bu bilgisayarın LAN adresini açmalı; localhost sadece bu cihazda çalışır.';
@@ -63,7 +63,7 @@ export function LandingScreen({
         </div>
 
         <div className="landing-heading">
-          <p className="eyebrow">LAN ARENA</p>
+          <p className="eyebrow">{import.meta.env.MODE === 'sites' ? 'İNTERNET DENEMESİ' : 'LAN ARENA'}</p>
           <h1 id="landing-title">NEON KNOCKOUT <span className="title-3d">3D</span></h1>
         </div>
 
@@ -169,7 +169,7 @@ export function LandingScreen({
         </form>
 
         <p className="landing-network" data-testid="network-origin">{networkMessage()}</p>
-        <p className="landing-tagline">Aynı ağdaki arkadaşlarınla oyna</p>
+        <p className="landing-tagline">{import.meta.env.MODE === 'sites' ? 'Oda kodunu paylaş, doğrudan bağlantıyı dene' : 'Aynı ağdaki arkadaşlarınla oyna'}</p>
       </div>
     </section>
   );
