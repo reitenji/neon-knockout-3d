@@ -1,0 +1,657 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-12T04:24:37.407684+00:00",
+  "title": "Design System: Neon Knockout 3D",
+  "extensions": {
+    "colorMeta": {
+      "bg": {
+        "role": "neutral",
+        "displayName": "Bg",
+        "tonalRamp": [
+          "oklch(15% 0.0113 250.20)",
+          "oklch(26.43% 0.0113 250.20)",
+          "oklch(37.86% 0.0113 250.20)",
+          "oklch(49.29% 0.0113 250.20)",
+          "oklch(60.71% 0.0113 250.20)",
+          "oklch(72.14% 0.0113 250.20)",
+          "oklch(83.57% 0.0113 250.20)",
+          "oklch(95% 0.0113 250.20)"
+        ]
+      },
+      "bg-raised": {
+        "role": "neutral",
+        "displayName": "Bg Raised",
+        "tonalRamp": [
+          "oklch(15% 0.0157 248.78)",
+          "oklch(26.43% 0.0157 248.78)",
+          "oklch(37.86% 0.0157 248.78)",
+          "oklch(49.29% 0.0157 248.78)",
+          "oklch(60.71% 0.0157 248.78)",
+          "oklch(72.14% 0.0157 248.78)",
+          "oklch(83.57% 0.0157 248.78)",
+          "oklch(95% 0.0157 248.78)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Surface",
+        "tonalRamp": [
+          "oklch(15% 0.0203 248.93)",
+          "oklch(26.43% 0.0203 248.93)",
+          "oklch(37.86% 0.0203 248.93)",
+          "oklch(49.29% 0.0203 248.93)",
+          "oklch(60.71% 0.0203 248.93)",
+          "oklch(72.14% 0.0203 248.93)",
+          "oklch(83.57% 0.0203 248.93)",
+          "oklch(95% 0.0203 248.93)"
+        ]
+      },
+      "surface-strong": {
+        "role": "neutral",
+        "displayName": "Surface Strong",
+        "tonalRamp": [
+          "oklch(15% 0.0253 246.65)",
+          "oklch(26.43% 0.0253 246.65)",
+          "oklch(37.86% 0.0253 246.65)",
+          "oklch(49.29% 0.0253 246.65)",
+          "oklch(60.71% 0.0253 246.65)",
+          "oklch(72.14% 0.0253 246.65)",
+          "oklch(83.57% 0.0253 246.65)",
+          "oklch(95% 0.0253 246.65)"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Border",
+        "tonalRamp": [
+          "oklch(15% 0.0331 245.58)",
+          "oklch(26.43% 0.0331 245.58)",
+          "oklch(37.86% 0.0331 245.58)",
+          "oklch(49.29% 0.0331 245.58)",
+          "oklch(60.71% 0.0331 245.58)",
+          "oklch(72.14% 0.0331 245.58)",
+          "oklch(83.57% 0.0331 245.58)",
+          "oklch(95% 0.0331 245.58)"
+        ]
+      },
+      "border-strong": {
+        "role": "neutral",
+        "displayName": "Border Strong",
+        "tonalRamp": [
+          "oklch(15% 0.0473 243.59)",
+          "oklch(26.43% 0.0473 243.59)",
+          "oklch(37.86% 0.0473 243.59)",
+          "oklch(49.29% 0.0473 243.59)",
+          "oklch(60.71% 0.0473 243.59)",
+          "oklch(72.14% 0.0473 243.59)",
+          "oklch(83.57% 0.0473 243.59)",
+          "oklch(95% 0.0473 243.59)"
+        ]
+      },
+      "text": {
+        "role": "neutral",
+        "displayName": "Text",
+        "tonalRamp": [
+          "oklch(15% 0.0119 223.52)",
+          "oklch(26.43% 0.0119 223.52)",
+          "oklch(37.86% 0.0119 223.52)",
+          "oklch(49.29% 0.0119 223.52)",
+          "oklch(60.71% 0.0119 223.52)",
+          "oklch(72.14% 0.0119 223.52)",
+          "oklch(83.57% 0.0119 223.52)",
+          "oklch(95% 0.0119 223.52)"
+        ]
+      },
+      "text-muted": {
+        "role": "neutral",
+        "displayName": "Text Muted",
+        "tonalRamp": [
+          "oklch(15% 0.0348 238.38)",
+          "oklch(26.43% 0.0348 238.38)",
+          "oklch(37.86% 0.0348 238.38)",
+          "oklch(49.29% 0.0348 238.38)",
+          "oklch(60.71% 0.0348 238.38)",
+          "oklch(72.14% 0.0348 238.38)",
+          "oklch(83.57% 0.0348 238.38)",
+          "oklch(95% 0.0348 238.38)"
+        ]
+      },
+      "cyan": {
+        "role": "primary",
+        "displayName": "Cyan",
+        "tonalRamp": [
+          "oklch(15% 0.1377 213.44)",
+          "oklch(26.43% 0.1377 213.44)",
+          "oklch(37.86% 0.1377 213.44)",
+          "oklch(49.29% 0.1377 213.44)",
+          "oklch(60.71% 0.1377 213.44)",
+          "oklch(72.14% 0.1377 213.44)",
+          "oklch(83.57% 0.1377 213.44)",
+          "oklch(95% 0.1377 213.44)"
+        ]
+      },
+      "cyan-dim": {
+        "role": "primary",
+        "displayName": "Cyan Dim",
+        "tonalRamp": [
+          "oklch(15% 0.0869 217.53)",
+          "oklch(26.43% 0.0869 217.53)",
+          "oklch(37.86% 0.0869 217.53)",
+          "oklch(49.29% 0.0869 217.53)",
+          "oklch(60.71% 0.0869 217.53)",
+          "oklch(72.14% 0.0869 217.53)",
+          "oklch(83.57% 0.0869 217.53)",
+          "oklch(95% 0.0869 217.53)"
+        ]
+      },
+      "amber": {
+        "role": "secondary",
+        "displayName": "Amber",
+        "tonalRamp": [
+          "oklch(15% 0.1486 72.10)",
+          "oklch(26.43% 0.1486 72.10)",
+          "oklch(37.86% 0.1486 72.10)",
+          "oklch(49.29% 0.1486 72.10)",
+          "oklch(60.71% 0.1486 72.10)",
+          "oklch(72.14% 0.1486 72.10)",
+          "oklch(83.57% 0.1486 72.10)",
+          "oklch(95% 0.1486 72.10)"
+        ]
+      },
+      "amber-dim": {
+        "role": "secondary",
+        "displayName": "Amber Dim",
+        "tonalRamp": [
+          "oklch(15% 0.0984 61.81)",
+          "oklch(26.43% 0.0984 61.81)",
+          "oklch(37.86% 0.0984 61.81)",
+          "oklch(49.29% 0.0984 61.81)",
+          "oklch(60.71% 0.0984 61.81)",
+          "oklch(72.14% 0.0984 61.81)",
+          "oklch(83.57% 0.0984 61.81)",
+          "oklch(95% 0.0984 61.81)"
+        ]
+      },
+      "ready": {
+        "role": "secondary",
+        "displayName": "Ready",
+        "tonalRamp": [
+          "oklch(15% 0.2113 138.23)",
+          "oklch(26.43% 0.2113 138.23)",
+          "oklch(37.86% 0.2113 138.23)",
+          "oklch(49.29% 0.2113 138.23)",
+          "oklch(60.71% 0.2113 138.23)",
+          "oklch(72.14% 0.2113 138.23)",
+          "oklch(83.57% 0.2113 138.23)",
+          "oklch(95% 0.2113 138.23)"
+        ]
+      },
+      "warning": {
+        "role": "secondary",
+        "displayName": "Warning",
+        "tonalRamp": [
+          "oklch(15% 0.1423 82.66)",
+          "oklch(26.43% 0.1423 82.66)",
+          "oklch(37.86% 0.1423 82.66)",
+          "oklch(49.29% 0.1423 82.66)",
+          "oklch(60.71% 0.1423 82.66)",
+          "oklch(72.14% 0.1423 82.66)",
+          "oklch(83.57% 0.1423 82.66)",
+          "oklch(95% 0.1423 82.66)"
+        ]
+      },
+      "danger": {
+        "role": "secondary",
+        "displayName": "Danger",
+        "tonalRamp": [
+          "oklch(15% 0.1964 18.50)",
+          "oklch(26.43% 0.1964 18.50)",
+          "oklch(37.86% 0.1964 18.50)",
+          "oklch(49.29% 0.1964 18.50)",
+          "oklch(60.71% 0.1964 18.50)",
+          "oklch(72.14% 0.1964 18.50)",
+          "oklch(83.57% 0.1964 18.50)",
+          "oklch(95% 0.1964 18.50)"
+        ]
+      },
+      "arena-void": {
+        "role": "neutral",
+        "displayName": "Arena Void",
+        "tonalRamp": [
+          "oklch(15% 0.0256 263.06)",
+          "oklch(26.43% 0.0256 263.06)",
+          "oklch(37.86% 0.0256 263.06)",
+          "oklch(49.29% 0.0256 263.06)",
+          "oklch(60.71% 0.0256 263.06)",
+          "oklch(72.14% 0.0256 263.06)",
+          "oklch(83.57% 0.0256 263.06)",
+          "oklch(95% 0.0256 263.06)"
+        ]
+      },
+      "arena-steel": {
+        "role": "neutral",
+        "displayName": "Arena Steel",
+        "tonalRamp": [
+          "oklch(15% 0.0387 246.22)",
+          "oklch(26.43% 0.0387 246.22)",
+          "oklch(37.86% 0.0387 246.22)",
+          "oklch(49.29% 0.0387 246.22)",
+          "oklch(60.71% 0.0387 246.22)",
+          "oklch(72.14% 0.0387 246.22)",
+          "oklch(83.57% 0.0387 246.22)",
+          "oklch(95% 0.0387 246.22)"
+        ]
+      },
+      "arena-wall": {
+        "role": "neutral",
+        "displayName": "Arena Wall",
+        "tonalRamp": [
+          "oklch(15% 0.0383 253.99)",
+          "oklch(26.43% 0.0383 253.99)",
+          "oklch(37.86% 0.0383 253.99)",
+          "oklch(49.29% 0.0383 253.99)",
+          "oklch(60.71% 0.0383 253.99)",
+          "oklch(72.14% 0.0383 253.99)",
+          "oklch(83.57% 0.0383 253.99)",
+          "oklch(95% 0.0383 253.99)"
+        ]
+      },
+      "arena-edge": {
+        "role": "neutral",
+        "displayName": "Arena Edge",
+        "tonalRamp": [
+          "oklch(15% 0.0879 203.81)",
+          "oklch(26.43% 0.0879 203.81)",
+          "oklch(37.86% 0.0879 203.81)",
+          "oklch(49.29% 0.0879 203.81)",
+          "oklch(60.71% 0.0879 203.81)",
+          "oklch(72.14% 0.0879 203.81)",
+          "oklch(83.57% 0.0879 203.81)",
+          "oklch(95% 0.0879 203.81)"
+        ]
+      },
+      "arena-edge-contracting": {
+        "role": "neutral",
+        "displayName": "Arena Edge Contracting",
+        "tonalRamp": [
+          "oklch(15% 0.1351 51.14)",
+          "oklch(26.43% 0.1351 51.14)",
+          "oklch(37.86% 0.1351 51.14)",
+          "oklch(49.29% 0.1351 51.14)",
+          "oklch(60.71% 0.1351 51.14)",
+          "oklch(72.14% 0.1351 51.14)",
+          "oklch(83.57% 0.1351 51.14)",
+          "oklch(95% 0.1351 51.14)"
+        ]
+      },
+      "protection-ivory": {
+        "role": "neutral",
+        "displayName": "Protection Ivory",
+        "tonalRamp": [
+          "oklch(15% 0.0145 224.50)",
+          "oklch(26.43% 0.0145 224.50)",
+          "oklch(37.86% 0.0145 224.50)",
+          "oklch(49.29% 0.0145 224.50)",
+          "oklch(60.71% 0.0145 224.50)",
+          "oklch(72.14% 0.0145 224.50)",
+          "oklch(83.57% 0.0145 224.50)",
+          "oklch(95% 0.0145 224.50)"
+        ]
+      },
+      "fighter-rift": {
+        "role": "primary",
+        "displayName": "Fighter Rift",
+        "tonalRamp": [
+          "oklch(15% 0.1161 207.05)",
+          "oklch(26.43% 0.1161 207.05)",
+          "oklch(37.86% 0.1161 207.05)",
+          "oklch(49.29% 0.1161 207.05)",
+          "oklch(60.71% 0.1161 207.05)",
+          "oklch(72.14% 0.1161 207.05)",
+          "oklch(83.57% 0.1161 207.05)",
+          "oklch(95% 0.1161 207.05)"
+        ]
+      },
+      "fighter-bastion": {
+        "role": "secondary",
+        "displayName": "Fighter Bastion",
+        "tonalRamp": [
+          "oklch(15% 0.1290 73.26)",
+          "oklch(26.43% 0.1290 73.26)",
+          "oklch(37.86% 0.1290 73.26)",
+          "oklch(49.29% 0.1290 73.26)",
+          "oklch(60.71% 0.1290 73.26)",
+          "oklch(72.14% 0.1290 73.26)",
+          "oklch(83.57% 0.1290 73.26)",
+          "oklch(95% 0.1290 73.26)"
+        ]
+      },
+      "fighter-pulse": {
+        "role": "secondary",
+        "displayName": "Fighter Pulse",
+        "tonalRamp": [
+          "oklch(15% 0.1882 7.49)",
+          "oklch(26.43% 0.1882 7.49)",
+          "oklch(37.86% 0.1882 7.49)",
+          "oklch(49.29% 0.1882 7.49)",
+          "oklch(60.71% 0.1882 7.49)",
+          "oklch(72.14% 0.1882 7.49)",
+          "oklch(83.57% 0.1882 7.49)",
+          "oklch(95% 0.1882 7.49)"
+        ]
+      },
+      "fighter-wraith": {
+        "role": "secondary",
+        "displayName": "Fighter Wraith",
+        "tonalRamp": [
+          "oklch(15% 0.1443 295.96)",
+          "oklch(26.43% 0.1443 295.96)",
+          "oklch(37.86% 0.1443 295.96)",
+          "oklch(49.29% 0.1443 295.96)",
+          "oklch(60.71% 0.1443 295.96)",
+          "oklch(72.14% 0.1443 295.96)",
+          "oklch(83.57% 0.1443 295.96)",
+          "oklch(95% 0.1443 295.96)"
+        ]
+      },
+      "fighter-dark": {
+        "role": "neutral",
+        "displayName": "Fighter Dark",
+        "tonalRamp": [
+          "oklch(15% 0.0346 250.97)",
+          "oklch(26.43% 0.0346 250.97)",
+          "oklch(37.86% 0.0346 250.97)",
+          "oklch(49.29% 0.0346 250.97)",
+          "oklch(60.71% 0.0346 250.97)",
+          "oklch(72.14% 0.0346 250.97)",
+          "oklch(83.57% 0.0346 250.97)",
+          "oklch(95% 0.0346 250.97)"
+        ]
+      },
+      "fighter-pale": {
+        "role": "neutral",
+        "displayName": "Fighter Pale",
+        "tonalRamp": [
+          "oklch(15% 0.0118 231.66)",
+          "oklch(26.43% 0.0118 231.66)",
+          "oklch(37.86% 0.0118 231.66)",
+          "oklch(49.29% 0.0118 231.66)",
+          "oklch(60.71% 0.0118 231.66)",
+          "oklch(72.14% 0.0118 231.66)",
+          "oklch(83.57% 0.0118 231.66)",
+          "oklch(95% 0.0118 231.66)"
+        ]
+      },
+      "fighter-joint": {
+        "role": "neutral",
+        "displayName": "Fighter Joint",
+        "tonalRamp": [
+          "oklch(15% 0.0364 254.93)",
+          "oklch(26.43% 0.0364 254.93)",
+          "oklch(37.86% 0.0364 254.93)",
+          "oklch(49.29% 0.0364 254.93)",
+          "oklch(60.71% 0.0364 254.93)",
+          "oklch(72.14% 0.0364 254.93)",
+          "oklch(83.57% 0.0364 254.93)",
+          "oklch(95% 0.0364 254.93)"
+        ]
+      },
+      "fighter-pulse-armor": {
+        "role": "neutral",
+        "displayName": "Fighter Pulse Armor",
+        "tonalRamp": [
+          "oklch(15% 0.0059 153.77)",
+          "oklch(26.43% 0.0059 153.77)",
+          "oklch(37.86% 0.0059 153.77)",
+          "oklch(49.29% 0.0059 153.77)",
+          "oklch(60.71% 0.0059 153.77)",
+          "oklch(72.14% 0.0059 153.77)",
+          "oklch(83.57% 0.0059 153.77)",
+          "oklch(95% 0.0059 153.77)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Existing interface typography role."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Inherited UI family; individual components set their sizes."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Existing interface typography role."
+      },
+      "eyebrow": {
+        "displayName": "Eyebrow",
+        "purpose": "Existing interface typography role."
+      },
+      "command": {
+        "displayName": "Command",
+        "purpose": "Existing interface typography role."
+      },
+      "chrome": {
+        "displayName": "Chrome",
+        "purpose": "Existing interface typography role."
+      },
+      "fighter-label": {
+        "displayName": "Fighter Label",
+        "purpose": "Projected player names above rendered fighter bodies."
+      },
+      "announcement": {
+        "displayName": "Announcement",
+        "purpose": "Brief round feedback."
+      }
+    },
+    "shadows": [
+      {
+        "name": "top-chrome",
+        "value": "0 10px 30px rgb(0 0 0 / 0.28)",
+        "purpose": "Structural depth below session chrome."
+      },
+      {
+        "name": "technical-frame",
+        "value": "0 24px 70px rgb(0 0 0 / 0.42)",
+        "purpose": "Large menu containers."
+      },
+      {
+        "name": "hud-overlay",
+        "value": "0 10px 26px rgb(0 0 0 / 0.32)",
+        "purpose": "Readable HUD overlays."
+      },
+      {
+        "name": "focus-ring",
+        "value": "0 0 0 2px #05080c, 0 0 0 4px #25d9f8",
+        "purpose": "Visible keyboard focus from --focus-ring."
+      }
+    ],
+    "motion": [
+      {
+        "name": "fast",
+        "value": "120ms",
+        "purpose": "Interactive border, color and press transitions."
+      },
+      {
+        "name": "normal",
+        "value": "200ms",
+        "purpose": "Screen entry with ease-out."
+      },
+      {
+        "name": "meter",
+        "value": "90ms linear",
+        "purpose": "HUD progress interpolation; none under reduced motion."
+      },
+      {
+        "name": "reduced-transition",
+        "value": "80ms",
+        "purpose": "Global reduced-motion transition override."
+      },
+      {
+        "name": "respawn-body",
+        "value": "340ms",
+        "purpose": "Body return begins only after authoritative respawn."
+      },
+      {
+        "name": "protection-cue",
+        "value": "static",
+        "purpose": "Ivory ground ring stays visible during active non-offensive spawn protection, including reduced motion."
+      },
+      {
+        "name": "body-only-pose",
+        "value": "bob, lean, twist, scale",
+        "purpose": "Pose the body hierarchy; the root stays at displayed gameplay position."
+      },
+      {
+        "name": "reduced-decoration",
+        "value": "disabled",
+        "purpose": "Disable decorative bobbing, preview sway and PULSE ornament rotation; keep combat cues."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "shell-compact-width",
+        "value": "(max-width: 1024px)"
+      },
+      {
+        "name": "shell-narrow",
+        "value": "(max-width: 760px)"
+      },
+      {
+        "name": "shell-short",
+        "value": "(max-height: 720px)"
+      },
+      {
+        "name": "hud-compact",
+        "value": "(max-width: 1100px), (max-height: 700px)"
+      },
+      {
+        "name": "hud-small",
+        "value": "(max-width: 960px), (max-height: 630px)"
+      },
+      {
+        "name": "touch-landscape",
+        "value": "(pointer: coarse) and (orientation: landscape)"
+      },
+      {
+        "name": "touch-short",
+        "value": "(pointer: coarse) and (orientation: landscape) and (max-height: 380px)"
+      },
+      {
+        "name": "showcase-narrow",
+        "value": "(max-width: 700px)"
+      },
+      {
+        "name": "showcase-short",
+        "value": "(max-height: 600px) and (orientation: landscape)"
+      },
+      {
+        "name": "lobby-compact-desktop",
+        "value": "(min-width: 900px) and (min-height: 620px)"
+      },
+      {
+        "name": "lan-share-stack",
+        "value": "(max-width: 900px)"
+      },
+      {
+        "name": "lan-share-narrow",
+        "value": "(max-width: 620px)"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Cyan command",
+      "kind": "button",
+      "refersTo": "button-cyan",
+      "description": "Primary room command with the implemented clipped border and glow.",
+      "html": "<button class=\"ds-command-cyan\">ODA OLUŞTUR</button>",
+      "css": ".ds-command-cyan{background:var(--color-bg-raised,#0a1016);color:var(--color-text,#edf7fb);border:1px solid var(--color-border-strong,#365065);font-family:var(--font-ui,system-ui,sans-serif);cursor:pointer;transition:border-color var(--motion-fast,120ms),color var(--motion-fast,120ms),box-shadow var(--motion-fast,120ms),transform var(--motion-fast,120ms);min-height:48px;min-width:180px;padding:0 18px;border-radius:var(--radius-sm,4px);font-weight:650;letter-spacing:.035em;clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);border-color:rgb(37 217 248 / .75);box-shadow:inset 0 0 20px rgb(37 217 248 / .08),0 0 18px rgb(37 217 248 / .05)}.ds-command-cyan:hover{border-color:var(--color-text-muted,#8da4b4)}.ds-command-cyan:focus-visible{outline:none;box-shadow:var(--focus-ring,0 0 0 2px #05080c,0 0 0 4px #25d9f8)}.ds-command-cyan:active{transform:translateY(1px)}.ds-command-cyan:disabled{opacity:.42;cursor:not-allowed;box-shadow:none;border-color:var(--color-border,#21313f)}"
+    },
+    {
+      "name": "Amber command",
+      "kind": "button",
+      "refersTo": "button-amber",
+      "description": "Primary room command with the implemented clipped border and glow.",
+      "html": "<button class=\"ds-command-amber\">KATIL</button>",
+      "css": ".ds-command-amber{background:var(--color-bg-raised,#0a1016);color:var(--color-text,#edf7fb);border:1px solid var(--color-border-strong,#365065);font-family:var(--font-ui,system-ui,sans-serif);cursor:pointer;transition:border-color var(--motion-fast,120ms),color var(--motion-fast,120ms),box-shadow var(--motion-fast,120ms),transform var(--motion-fast,120ms);min-height:48px;min-width:180px;padding:0 18px;border-radius:var(--radius-sm,4px);font-weight:650;letter-spacing:.035em;clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);border-color:rgb(255 179 71 / .72);box-shadow:inset 0 0 20px rgb(255 179 71 / .07),0 0 18px rgb(255 179 71 / .04)}.ds-command-amber:hover{border-color:var(--color-text-muted,#8da4b4)}.ds-command-amber:focus-visible{outline:none;box-shadow:var(--focus-ring,0 0 0 2px #05080c,0 0 0 4px #25d9f8)}.ds-command-amber:active{transform:translateY(1px)}.ds-command-amber:disabled{opacity:.42;cursor:not-allowed;box-shadow:none;border-color:var(--color-border,#21313f)}"
+    },
+    {
+      "name": "Utility button",
+      "kind": "button",
+      "refersTo": "button-chrome",
+      "description": "Compact session utility control.",
+      "html": "<button class=\"ds-chrome\">Kopyala</button>",
+      "css": ".ds-chrome{background:var(--color-bg-raised,#0a1016);color:var(--color-text,#edf7fb);border:1px solid var(--color-border-strong,#365065);font-family:var(--font-ui,system-ui,sans-serif);cursor:pointer;transition:border-color var(--motion-fast,120ms),color var(--motion-fast,120ms),box-shadow var(--motion-fast,120ms),transform var(--motion-fast,120ms);min-height:34px;padding:0 11px;border-radius:var(--radius-sm,4px);color:var(--color-text-muted,#8da4b4);font-size:.72rem;letter-spacing:.05em}.ds-chrome:hover{color:var(--color-text,#edf7fb);border-color:var(--color-text-muted,#8da4b4)}.ds-chrome:focus-visible{outline:none;box-shadow:var(--focus-ring,0 0 0 2px #05080c,0 0 0 4px #25d9f8)}.ds-chrome:active{transform:translateY(1px)}.ds-chrome:disabled{opacity:.42;cursor:not-allowed}"
+    },
+    {
+      "name": "Cyan input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Labeled room-entry field with focus and invalid state.",
+      "html": "<label class=\"ds-field\"><span>OYUNCU ADI</span><input aria-label=\"Oyuncu adı\" placeholder=\"Adın\" /></label>",
+      "css": ".ds-field{display:grid;gap:var(--space-2,8px);font-family:var(--font-ui,system-ui,sans-serif)}.ds-field span{color:var(--color-cyan,#25d9f8);font-family:var(--font-mono,monospace);font-size:.75rem;letter-spacing:.12em}.ds-field input{width:100%;height:48px;padding:0 16px;border:1px solid var(--color-border-strong,#365065);border-radius:var(--radius-sm,4px);background:var(--color-bg,#05080c);color:var(--color-text,#edf7fb);caret-color:var(--color-cyan,#25d9f8);font:inherit;transition:border-color var(--motion-fast,120ms),box-shadow var(--motion-fast,120ms)}.ds-field input:focus{border-color:var(--color-cyan,#25d9f8)}.ds-field input:focus-visible{outline:none;box-shadow:var(--focus-ring,0 0 0 2px #05080c,0 0 0 4px #25d9f8)}.ds-field input[aria-invalid=\"true\"]{border-color:var(--color-danger,#ff5d6c)}"
+    },
+    {
+      "name": "Technical frame",
+      "kind": "card",
+      "refersTo": "tech-frame",
+      "description": "Large clipped structural container; sample padding comes from the lobby.",
+      "html": "<section class=\"ds-frame\">NEON KNOCKOUT 3D</section>",
+      "css": ".ds-frame{position:relative;padding:18px 26px;color:var(--color-text,#edf7fb);font-family:var(--font-ui,system-ui,sans-serif);border:1px solid var(--color-border-strong,#365065);background:rgb(8 14 20 / .98);box-shadow:0 24px 70px rgb(0 0 0 / .42);clip-path:polygon(14px 0,calc(100% - 14px) 0,100% 14px,100% calc(100% - 14px),calc(100% - 14px) 100%,14px 100%,0 calc(100% - 14px),0 14px)}.ds-frame::before{content:\"\";position:absolute;inset:8px;border:1px solid rgb(54 80 101 / .28);pointer-events:none}"
+    },
+    {
+      "name": "Selected fighter option",
+      "kind": "button",
+      "refersTo": "fighter-option-selected",
+      "description": "Selection control paired with the separately rendered 3D showcase.",
+      "html": "<button class=\"ds-fighter\" aria-pressed=\"true\">RIFT</button>",
+      "css": ".ds-fighter{background:var(--color-bg-raised,#0a1016);color:var(--color-text,#edf7fb);border:1px solid var(--color-border-strong,#365065);font-family:var(--font-ui,system-ui,sans-serif);cursor:pointer;transition:border-color var(--motion-fast,120ms),color var(--motion-fast,120ms),box-shadow var(--motion-fast,120ms),transform var(--motion-fast,120ms);min-height:68px;padding:var(--space-2,8px);color:var(--color-cyan,#25d9f8);border-color:var(--color-cyan,#25d9f8)}.ds-fighter:hover{color:var(--color-text,#edf7fb);border-color:var(--color-text-muted,#8da4b4)}.ds-fighter:focus-visible{outline:none;box-shadow:var(--focus-ring,0 0 0 2px #05080c,0 0 0 4px #25d9f8)}.ds-fighter:active{transform:translateY(1px)}.ds-fighter:disabled{opacity:.42;cursor:not-allowed;box-shadow:none}"
+    },
+    {
+      "name": "Ability progress meter",
+      "kind": "custom",
+      "refersTo": "ability-meter",
+      "description": "Read-only snapshot progress; sample shows a partially recovered ability.",
+      "html": "<div class=\"ds-meter\" role=\"progressbar\" aria-label=\"Yetenek hazırlığı\" aria-valuenow=\"65\" aria-valuemin=\"0\" aria-valuemax=\"100\"><i></i></div>",
+      "css": ".ds-meter{height:5px;overflow:hidden;border:1px solid rgb(37 217 248 / .52);background:rgb(37 217 248 / .1)}.ds-meter i{display:block;width:100%;height:100%;background:var(--color-cyan,#25d9f8);transform:scaleX(.65);transform-origin:left center;transition:transform 90ms linear}@media(prefers-reduced-motion:reduce){.ds-meter i{transition:none}}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Neon industrial arena",
+    "overview": "The neon industrial arena makes four authored robot silhouettes readable against a dark steel stage. Compact, instrument-like menus support the match; the 2.5D world supplies depth through geometry, directional poses and grounded shadows. Turkish remains the product language.\n\nThe camera is fixed and orthographic. Small emissive accents identify machinery and actions without washing out silhouettes, player rings or the playable boundary. All fighter geometry is authored locally with articulated Three.js primitives, so the visual identity works without external model assets or an asset CDN.",
+    "keyCharacteristics": [
+      "Dark steel surfaces with restrained cyan and amber interface accents.",
+      "Four distinct fighter silhouettes, with player identity separate from chassis color.",
+      "Fixed orthographic composition and visual height above a flat gameplay plane.",
+      "Combat-clock poses and persistent, readable status cues."
+    ],
+    "rules": [
+      {
+        "name": "The Identity Rule",
+        "body": "Chassis color identifies a fighter type; the independent player accent, name and ground ring identify the player. Preserve both channels.",
+        "section": "colors"
+      },
+      {
+        "name": "The Grounded Motion Rule",
+        "body": "Keep the fighter root at the displayed gameplay position. Apply bob, lean, twist, squash and respawn height to the body hierarchy; animation never moves hitboxes.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do preserve the whole playable polygon when the viewport changes.",
+      "Do make RIFT, BASTION, PULSE and WRAITH identifiable by silhouette and motion.",
+      "Do use server snapshot state for cooldowns, protection and match status.",
+      "Do retain the white ground protection ring under reduced motion.",
+      "Do preserve Turkish labels, keyboard focus and landscape touch controls."
+    ],
+    "donts": [
+      "Don't use bloom-heavy noise or camera motion that hides competitive information.",
+      "Don't move gameplay roots or hitboxes to make an animation look stronger.",
+      "Don't replace player identity accents with chassis colors.",
+      "Don't animate a fighter returning before the authoritative respawn occurs.",
+      "Don't depend on remote fonts, models or asset CDNs for the local experience."
+    ]
+  }
+}
