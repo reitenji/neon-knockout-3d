@@ -1,0 +1,9 @@
+# Neon Knockout 3D visual direction
+
+The match is an Experience surface. Retain the game's neon industrial identity while replacing flat fighter art with authored procedural 3D models. The scene uses a dark blue-black void (#060b16), a matte steel octagonal platform (#233548), bright ivory markings (#dce8ed), and four character colors: RIFT cyan (#58dced), BASTION amber (#f6b65d), PULSE coral (#ff668d), WRAITH violet (#b79aff). Player identity remains visible through ground rings and labels independently of the chassis color.
+
+Use a fixed orthographic camera with a shallow diagonal elevation, an open view of the entire playable polygon, restrained fog, a soft hemisphere light and a shadow-casting key light. Keep glowing surfaces small; silhouettes, contact shadows, directional poses, anticipation, follow-through, and landing compression create the impression of weight. Avoid bloom-heavy noise or camera motion that hides competitive information. Respect reduced motion for decorative movement and camera response while preserving attack and ability cues.
+
+RIFT: narrow torso, split fins, long forearm blades and articulated legs; forward-leaning fast steps and sharp alternating strikes. BASTION: wide squared shoulders, heavy gauntlets, short armored legs; planted steps and deliberate torso rotation. PULSE: spherical reactor, floating lower body, orbiting fins and emitter arms; levitation and radial charge. WRAITH: tapered torso, hood, long forearms and split trailing panels; gliding travel and translucent phase motion. Models are created locally with Three.js geometry and pivot hierarchies, not external licensed assets.
+
+Lobby character options explain the real ability and contain a rendered character preview. Existing compact menu layout and accessibility remain the base. The combat HUD shows the player's movement ability cooldown using its actual server snapshot. Match controls remain WASD, J, K, Space and existing touch buttons.
