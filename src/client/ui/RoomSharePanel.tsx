@@ -6,30 +6,13 @@ export function RoomSharePanel({ roomCode }: Readonly<{ roomCode: string }>) {
   const url = `${window.location.origin}/room/${roomCode}`;
 
   async function copyLink(): Promise<void> {
+    setPending(true);
+    setFeedback('');
     try {
       await navigator.clipboard.writeText(url);
       setFeedback('Link kopyalandı. Arkadaşına gönderebilirsin.');
     } catch {
       setFeedback('Otomatik kopyalanamadı. Aşağıdaki linki seçip kopyalayabilirsin.');
-    }
-  }
-
-  async function shareLink(): Promise<void> {
-    setPending(true);
-    setFeedback('');
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: 'Neon Knockout 3D', url });
-        setFeedback('Paylaşım tamamlandı.');
-      } else {
-        await copyLink();
-      }
-    } catch (error) {
-      if (error instanceof DOMException && error.name === 'AbortError') {
-        setFeedback('Paylaşım iptal edildi.');
-      } else {
-        await copyLink();
-      }
     } finally {
       setPending(false);
     }
@@ -38,7 +21,7 @@ export function RoomSharePanel({ roomCode }: Readonly<{ roomCode: string }>) {
   return (
     <aside className="browser-host-share" aria-label="Oda daveti">
       <button className="chrome-button focus-ring" type="button" disabled={pending}
-        aria-busy={pending} onClick={() => void shareLink()}>Oda Linkini Paylaş</button>
+        aria-busy={pending} onClick={() => void copyLink()}>Oda Linkini Kopyala</button>
       <input className="room-share-link focus-ring" aria-label="Oda linki" readOnly value={url}
         onFocus={(event) => event.currentTarget.select()} />
       <span role="status">{feedback}</span>

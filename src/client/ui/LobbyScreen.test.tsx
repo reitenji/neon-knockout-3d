@@ -197,42 +197,25 @@ describe('LobbyScreen', () => {
 describe('Sites room invitations', () => {
   afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
-  it('copies the full invite URL for a guest when native sharing is unavailable', async () => {
+  it('copies the full invite URL for a guest without opening native sharing', async () => {
     vi.stubEnv('MODE', 'sites');
     const writeText = vi.fn(async () => undefined);
-    vi.stubGlobal('navigator', { clipboard: { writeText } });
+    const share = vi.fn();
+    vi.stubGlobal('navigator', { clipboard: { writeText }, share });
     renderLobby(state({ room: room({ hostPlayerId: 'player-2' }) }));
-    fireEvent.click(screen.getByRole('button', { name: 'Oda Linkini Paylaş' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Oda Linkini Kopyala' }));
     expect(await screen.findByRole('status')).toHaveTextContent('Link kopyalandı');
     expect(writeText).toHaveBeenCalledWith('http://localhost:3000/room/AB2Z');
-  });
-
-  it('shares the invite URL through the device share menu', async () => {
-    vi.stubEnv('MODE', 'sites');
-    const share = vi.fn(async () => undefined);
-    vi.stubGlobal('navigator', { share });
-    renderLobby();
-    fireEvent.click(screen.getByRole('button', { name: 'Oda Linkini Paylaş' }));
-    expect(await screen.findByRole('status')).toHaveTextContent('Paylaşım tamamlandı');
-    expect(share).toHaveBeenCalledWith({ title: 'Neon Knockout 3D', url: 'http://localhost:3000/room/AB2Z' });
+    expect(share).not.toHaveBeenCalled();
   });
 
   it('leaves the link selectable when clipboard access fails', async () => {
     vi.stubEnv('MODE', 'sites');
     vi.stubGlobal('navigator', { clipboard: { writeText: async () => { throw new Error('denied'); } } });
     renderLobby();
-    fireEvent.click(screen.getByRole('button', { name: 'Oda Linkini Paylaş' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Oda Linkini Kopyala' }));
     expect(await screen.findByRole('status')).toHaveTextContent(/linki seçip kopyalayabilirsin/i);
     expect(screen.getByRole('textbox', { name: 'Oda linki' })).toHaveValue('http://localhost:3000/room/AB2Z');
   });
 
-  it('does not copy or claim success when the share menu is cancelled', async () => {
-    vi.stubEnv('MODE', 'sites');
-    const writeText = vi.fn(async () => undefined);
-    vi.stubGlobal('navigator', { clipboard: { writeText }, share: async () => { throw new DOMException('cancelled', 'AbortError'); } });
-    renderLobby();
-    fireEvent.click(screen.getByRole('button', { name: 'Oda Linkini Paylaş' }));
-    expect(await screen.findByRole('status')).toHaveTextContent('Paylaşım iptal edildi');
-    expect(writeText).not.toHaveBeenCalled();
-  });
 });
