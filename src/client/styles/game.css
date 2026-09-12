@@ -918,7 +918,8 @@
   .bot-manager__add button, .bot-manager__edit button { grid-column: 1 / -1; }
 }
 
-.browser-host-share { display: grid; gap: 6px; max-width: 430px; font-size: 12px; line-height: 1.5; }
-.browser-host-share a { color: var(--color-cyan); }
+.browser-host-share { display: grid; gap: 6px; width: 100%; max-width: 430px; min-width: 0; font-size: 12px; line-height: 1.5; }
+.room-share-link { width: 100%; min-width: 0; padding: 8px; border: 1px solid currentColor; border-radius: 4px; background: transparent; color: var(--color-cyan); font: inherit; }
+.browser-host-share [role="status"] { min-height: 18px; }
 .browser-host-share span { color: var(--color-text-muted); }
 .landing-role { margin-block: 8px; }

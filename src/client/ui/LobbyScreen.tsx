@@ -11,6 +11,7 @@ import {
 } from '../../shared/roomSettings.js';
 import { selectCanStart, selectSelfPlayer, type ClientState } from '../state/gameStore.js';
 import { LanSharePanel } from './LanSharePanel.js';
+import { RoomSharePanel } from './RoomSharePanel.js';
 
 type LobbyScreenProps = Readonly<{
   state: ClientState;
@@ -79,6 +80,7 @@ export function LobbyScreen({
   const { room } = state;
   const selfPlayer = selectSelfPlayer(state);
   const isHost = selfPlayer?.playerId === room.hostPlayerId;
+  const isSites = import.meta.env.MODE === 'sites';
   const spectator = selfPlayer?.role === 'SPECTATOR';
   const fighters = room.players.filter((player) => player.role === 'FIGHTER');
   const spectators = room.players.filter((player) => player.role === 'SPECTATOR');
@@ -98,21 +100,19 @@ export function LobbyScreen({
   return (
     <section className="screen screen--lobby" aria-label="Oda lobisi">
       <div className="lobby-frame tech-frame">
-        <header className={`lobby-room${isHost ? ' lobby-room--with-share' : ''}`}>
+        <header className={`lobby-room${isHost || isSites ? ' lobby-room--with-share' : ''}`}>
           <div className="lobby-room__primary">
             <span className="eyebrow">ODA</span>
             <strong className="room-code" data-testid="room-code">{room.roomCode}</strong>
-            <button className="chrome-button copy-button focus-ring" type="button" aria-label="Kodu Kopyala" onClick={() => void onCopyRoomCode()}>
+            {!isSites ? <button className="chrome-button copy-button focus-ring" type="button" aria-label="Kodu Kopyala" onClick={() => void onCopyRoomCode()}>
               <span>Kodu Kopyala</span>
               <span className={`copy-button__mark is-${state.copyFeedback}`} aria-hidden="true">
                 {state.copyFeedback === 'copied' ? '✓' : state.copyFeedback === 'failed' ? '!' : '⧉'}
               </span>
-            </button>
+            </button> : null}
           </div>
-          {isHost ? (import.meta.env.MODE === 'sites' ? <aside className="browser-host-share" aria-label="Oda daveti">
-            <a href={`${window.location.origin}/room/${room.roomCode}`}>Davet bağlantısı</a>
-            <span>İnternet bağlantısı denemesi: farklı ağlardan katılabilirsiniz; bazı modemlerde ve mobil ağlarda bağlantı kurulamayabilir. Oda sahibinin bu sekmesi açık ve etkin kalmalı.</span>
-          </aside> : <LanSharePanel roomCode={room.roomCode} />) : null}
+          {isSites ? <RoomSharePanel key={room.roomCode} roomCode={room.roomCode} />
+            : isHost ? <LanSharePanel roomCode={room.roomCode} /> : null}
         </header>
 
         <label className="room-settings__field lobby-role">
