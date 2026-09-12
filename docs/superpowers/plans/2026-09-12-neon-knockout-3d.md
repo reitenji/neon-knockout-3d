@@ -17,15 +17,16 @@ Work only in /Users/serkances/dev/neon-knockout-3d. Preserve /Users/serkances/de
 ## Progress
 
 - [x] (2026-09-12) Verify source, authorization and remote identity; create isolated repository checkout on feature/neon-knockout-3d.
-- [ ] Establish passing inherited test baseline.
-- [ ] Task 1: implement and test character abilities and shared prediction.
-- [ ] Task 2: replace the renderer with authored 3D fighters, arena, animation, input and audio integration.
-- [ ] Task 3: integrate previews, ability descriptions, HUD and Turkish product identity.
-- [ ] Task 4: run browser acceptance, scoped review, fix findings, document and publish.
+- [x] Establish passing inherited test baseline: 69 files / 682 tests.
+- [x] Task 1: implement and test character abilities and shared prediction: commits 19018ad + eee046e; scoped review approved after the PULSE protection regression fix.
+- [x] Task 2: replace the renderer with authored 3D fighters, arena, animation, input and audio integration.
+- [x] Task 3: integrate previews, ability descriptions, HUD and Turkish product identity.
+- [x] Task 4a: browser acceptance, scoped review, fix findings and document evidence.
+- [ ] Task 4b: push verified main to the new GitHub repository and verify parity.
 
 ## Context and Orientation
 
-src/server/game/simulation.ts advances a server-owned match. movement.ts applies movement; combatResolution.ts applies hits and credit. src/shared/kinematics.ts and src/client/game/prediction.ts share movement prediction. src/client/game/GamePresentationBridge.ts delivers network snapshots and input. src/client/game/phaser currently contains renderer code alongside reusable input, session and timeline adapters. React embeds it through PhaserArena.tsx. Retain reusable session/timeline/attack cue logic in a renderer-independent runtime directory, remove Phaser-specific renderers and their obsolete tests after replacing their behavior. tests/e2e/fixtures.ts starts an isolated real server for browser tests.
+src/server/game/simulation.ts advances a server-owned match. movement.ts applies movement; combatResolution.ts applies hits and credit. src/shared/kinematics.ts and src/client/game/prediction.ts share movement prediction. src/client/game/GamePresentationBridge.ts delivers network snapshots and input. The starting source used src/client/game/phaser for rendering alongside reusable input, session and timeline adapters, embedded through PhaserArena.tsx. The completed renderer now lives in src/client/game/three, embedded through ThreeArena.tsx. Retain reusable session/timeline/attack cue logic in a renderer-independent runtime directory, remove Phaser-specific renderers and their obsolete tests after replacing their behavior. tests/e2e/fixtures.ts starts an isolated real server for browser tests.
 
 ## Task 1: Distinct fighter abilities
 
@@ -53,6 +54,8 @@ After checks pass, commit and create reitenji/neon-knockout-3d as a public repos
 
 ## Surprises & Discoveries
 
+The inherited Phaser implementation passed 682 tests. Replacing renderer-only tests while preserving reusable runtime tests yields a different suite count. Actual browser flows passed: joining, settings, combat, reconnect, result/rematch, touch input, network fallback, and WebRTC. A fixed-width preview camera initially clipped tall models; viewport-aware camera extents and podium spacing fix the framing. The new UDP range is 53140–53171 so both games can run concurrently.
+
 The source working checkout is on an older dirty WebRTC branch while upstream main already contains the published adaptive networking implementation. The new repository therefore starts from verified upstream main rather than copying incomplete working edits.
 
 ## Decision Log
@@ -69,4 +72,4 @@ The old checkout and upstream remote are read-only sources. Never clean or reset
 
 ## Outcomes & Retrospective
 
-Implementation and acceptance are in progress. This section will record concrete passing checks, publication SHA, and any remaining limits before completion.
+Implementation passed 610 tests, the eight-client load gate, lint, type checks and production build. Sixteen distinct browser checks cover Chromium combat/UI, performance, WebKit touch and the 20 ms simulated RTT tier. Scoped review fixed PULSE spawn-protection cancellation, return-animation timing and the visible protection cue. Production /health returned HTTP 200 via loopback and the private LAN address. See docs/acceptance-3d.md for measurements and the explicit physical-device acceptance limit. Implementation is committed as a51154c. The independent public GitHub repository reitenji/neon-knockout-3d has been created; pushing main and checking parity remain.

@@ -1,4 +1,21 @@
-# Neon Knockout
+# Neon Knockout 3D
+
+A standalone Three.js **2.5D LAN arena brawler**, derived from [Neon Knockout](https://github.com/reitenji/neon-knockout). The game uses an orthographic 3D camera and four original articulated robot models while combat remains on a flat, server-authoritative plane. Menus and controls are in Turkish. All art and audio ship locally; no Internet service is required during play.
+
+![Four playable fighters](artifacts/qa/lobby-desktop.png)
+
+## Fighters
+
+| Fighter | Play style | Space ability | Tradeoff |
+| --- | --- | --- | --- |
+| RIFT | Agile duelist; bladed arms and articulated running | Yarık Hücumu: 900-unit/s rush, 1.3 s cooldown | Fast movement requires careful edge control |
+| BASTION | Broad armored brawler; planted steps and heavy gauntlets | Zırhlı İlerleyiş: armored advance, 1.7 s cooldown | Slower movement; 35% less normal knockback, 70% less during the advance |
+| PULSE | Floating reactor; orbital machinery and emitter arms | Radyal Darbe: 125-unit radial repulsion at dash start, 1.8 s cooldown | Shorter invulnerability window; burst obeys protection and hit-credit rules |
+| WRAITH | Hooded spectral machine; gliding motion and claws | Faz Geçişi: 190 ms phase protection, 1.55 s cooldown | Receives 12% more knockback when hit |
+
+Keyboard and touch use the same authoritative rules. Every accepted activation has a cooldown; holding Space does not repeat the ability. Incoming attacks can be dodged during the character's invulnerability window; BASTION instead resists knockback.
+
+## Run on the same Wi-Fi
 
 ```sh
 npm ci
@@ -10,16 +27,16 @@ Use Node.js 20 or newer. The host command builds the production client and start
 ## Host and join
 
 1. On the host computer, run the two commands above.
-2. The host opens the printed `http://localhost:4174` URL, enters a name, and chooses **Oda Kur**.
-3. Copy the appropriate **Davet Linkleri** URL shown in the host lobby and share it with up to seven friends. The link already contains the room code, for example `http://192.168.1.20:4174/room/AB2Z`. Use **Yenile** if the host changes network.
+2. The host opens the printed `http://localhost:4175` URL, enters a name, and chooses **Oda Kur**.
+3. Copy the appropriate **Davet Linkleri** URL shown in the host lobby and share it with up to seven friends. The link already contains the room code, for example `http://192.168.1.20:4175/room/AB2Z`. Use **Yenile** if the host changes network.
 4. Each friend opens that exact link, enters only a player name, chooses **Odaya Katıl**, and selects a chassis. The four-character room code remains available as a manual fallback from the main page.
 5. The host chooses the room rules, every player chooses **Hazırım**, and the host chooses **Maçı Başlat** when every connected player is ready.
 
-The local host may use `http://localhost:4174`; other devices must use the private LAN URL shown in the lobby, commonly in `192.168.x.x`, `10.x.x.x`, or `172.16–31.x.x`. Allow incoming TCP connections on port 4174 and UDP ports 53100–53131 in the operating-system firewall when players cannot join or WebRTC cannot activate. Guests only need a modern browser after the host has installed dependencies.
+The local host may use `http://localhost:4175`; other devices must use the private LAN URL shown in the lobby, commonly in `192.168.x.x`, `10.x.x.x`, or `172.16–31.x.x`. Allow incoming TCP connections on port 4175 and UDP ports 53140–53171 in the operating-system firewall when players cannot join or WebRTC cannot activate. Guests only need a modern browser after the host has installed dependencies.
 
 ## Gameplay transport and Ping
 
-Socket.IO remains connected for room and session control. During a match, a supported browser tries a host-candidate-only WebRTC connection directly to the authoritative Node.js server over UDP 53100–53131. This is a LAN-only path: it uses no STUN, TURN, public relay, or Internet traversal. If the browser, firewall, or network cannot establish WebRTC, gameplay automatically continues through the current Socket.IO WebSocket or polling connection without reloading or leaving the room.
+Socket.IO remains connected for room and session control. During a match, a supported browser tries a host-candidate-only WebRTC connection directly to the authoritative Node.js server over UDP 53140–53171. This is a LAN-only path: it uses no STUN, TURN, public relay, or Internet traversal. If the browser, firewall, or network cannot establish WebRTC, gameplay automatically continues through the current Socket.IO WebSocket or polling connection without reloading or leaving the room.
 
 The UDP range can be overridden when the default conflicts with local policy. Set both bounds and keep them different, for example:
 
@@ -36,9 +53,9 @@ Only the current host can edit **Oda Ayarları**. Match duration can be **90 sn*
 - `WASD`: move and aim, including normalized diagonals; releasing movement retains the last aim direction
 - `J`: quick attack on each new key press
 - Hold `K`: charge a heavy strike while steering with `WASD`; release `K` to attack
-- `Space`: dash
+- `Space`: the selected fighter’s movement ability (also the touch Dash button)
 
-Arrow keys, both `Shift` keys, mouse movement, and mouse buttons do not control the fighter. All chassis have the same gameplay values. The first player to the room's configured knockout target wins; a normal knockout returns control in 600 ms, resets overload, and does not add any escalating penalty.
+Arrow keys, both `Shift` keys, mouse movement, and mouse buttons do not control the fighter. Each chassis now has its own movement speed, Space ability, cooldown, and resistance. The first player to the room's configured knockout target wins; a normal knockout returns control in 600 ms, resets overload, and does not add any escalating penalty.
 
 On touch devices, menus and the lobby work in portrait. Rotate to landscape for the match, then use the left joystick to move and aim. The right-side buttons perform quick attack, charge heavy while held and release it when lifted, and dash. Losing focus, rotating, or canceling a touch clears held controls so an action cannot remain stuck.
 
@@ -58,21 +75,21 @@ Closing or losing a browser connection does not award a knockout or a fall. Keep
 
 ## Platform notes
 
-- macOS: allow the terminal or Node.js application through the firewall if macOS asks, and ensure any managed or third-party firewall permits inbound TCP 4174 plus UDP 53100–53131.
-- Windows: allow Node.js on private networks in Windows Defender Firewall. A scoped UDP rule can be added from an elevated terminal with `netsh advfirewall firewall add rule name="Neon Knockout WebRTC" dir=in action=allow protocol=UDP localport=53100-53131 profile=private`.
-- Linux: allow TCP 4174 and UDP 53100–53131 on the active private-network firewall profile; with UFW, use `sudo ufw allow 4174/tcp` and `sudo ufw allow 53100:53131/udp`.
+- macOS: allow the terminal or Node.js application through the firewall if macOS asks, and ensure any managed or third-party firewall permits inbound TCP 4175 plus UDP 53140–53171.
+- Windows: allow Node.js on private networks in Windows Defender Firewall. A scoped UDP rule can be added from an elevated terminal with `netsh advfirewall firewall add rule name="Neon Knockout WebRTC" dir=in action=allow protocol=UDP localport=53140-53171 profile=private`.
+- Linux: allow TCP 4175 and UDP 53140–53171 on the active private-network firewall profile; with UFW, use `sudo ufw allow 4175/tcp` and `sudo ufw allow 53140:53171/udp`.
 
-If the LAN URL is absent, make sure the host has an active private network adapter. VPN, guest Wi-Fi/client isolation, captive portals, and corporate firewalls can block host candidates or all direct LAN connections. A guest network may let devices reach the Internet while deliberately preventing them from reaching each other; WebRTC and Socket.IO cannot bypass that policy. WebRTC falls back to Socket.IO when only UDP is blocked, and Socket.IO prefers WebSocket before polling, but none of these transports can bypass router isolation or a closed host firewall. Stop an older local server already using port 4174 before running `npm run lan`.
+If the LAN URL is absent, make sure the host has an active private network adapter. VPN, guest Wi-Fi/client isolation, captive portals, and corporate firewalls can block host candidates or all direct LAN connections. A guest network may let devices reach the Internet while deliberately preventing them from reaching each other; WebRTC and Socket.IO cannot bypass that policy. WebRTC falls back to Socket.IO when only UDP is blocked, and Socket.IO prefers WebSocket before polling, but none of these transports can bypass router isolation or a closed host firewall. Stop an older local server already using port 4175 before running `npm run lan`.
 
 ## Health probe and troubleshooting
 
 The host can confirm the server is listening with:
 
 ```sh
-curl --fail http://127.0.0.1:4174/health
+curl --fail http://127.0.0.1:4175/health
 ```
 
-It returns JSON with `status: "ok"` and the current room count. Also run the same `/health` request against the exact private address shown in the lobby or printed by `npm run lan`, for example `curl --fail http://192.168.1.20:4174/health`; do not guess or hardcode that address. Both requests must return HTTP 200. If the host probe works but a guest cannot connect, verify both devices are on the same private network, avoid an isolated guest Wi-Fi, use the displayed LAN URL exactly, and check the firewall rule.
+It returns JSON with `status: "ok"` and the current room count. Also run the same `/health` request against the exact private address shown in the lobby or printed by `npm run lan`, for example `curl --fail http://192.168.1.20:4175/health`; do not guess or hardcode that address. Both requests must return HTTP 200. If the host probe works but a guest cannot connect, verify both devices are on the same private network, avoid an isolated guest Wi-Fi, use the displayed LAN URL exactly, and check the firewall rule.
 
 ## Verification
 
@@ -89,3 +106,12 @@ npx vitest run tests/integration/socketFlow.test.ts --maxWorkers=1
 ```
 
 `npm run verify` runs lint, both TypeScript checks, all Vitest suites, the ten-second eight-client Socket.IO fallback load gate, and a production build. `npm run test:e2e` builds production code and runs the Chromium suite plus one isolated iPhone-like Playwright WebKit smoke; Chromium-only CDP touch and performance tests are not rerun on WebKit. The browser gates cover active Chromium-to-Node WebRTC gameplay, forced fallback without reload, a fresh lobby/rematch generation, unsupported-browser fallback, mobile landscape touch input, the representative frame/ring-out gates, and WebKit mobile create/join/start with one trusted touchscreen tap correlated to the exact `quick` input, WebRTC acceptance sequence, and single authoritative attack. Run `npx playwright install webkit` once if the WebKit runtime is absent; `npm run test:e2e:webkit` then runs only that production-build smoke. This is automated Playwright WebKit coverage, not acceptance on a physical iPhone or the shipping Safari application. The performance run uses one real 1280 × 720 WebRTC renderer with seven active lightweight Socket.IO participants and 60 exact input samples per transport. It enforces median FPS >= 58, p95 frame time < 25 ms, same-host median input-to-authoritative acceptance <= 20 ms, and same-host p95 < 40 ms. Physical-phone Wi-Fi remains a separate acceptance observation rather than being inferred from the local browser gate.
+
+
+## 3D implementation and validation
+
+The Three.js renderer lives in `src/client/game/three/`. Fighter geometry uses authored mesh/pivot hierarchies; motion separates visual limbs from server hitboxes. `src/client/game/runtime/` contains renderer-independent input, prediction session and audio code. `src/shared/fighters.ts` is the source of truth for character abilities, and the same movement definitions are used by server simulation and local prediction. Phaser is not a runtime dependency.
+
+The initial release validates same-host independent browser clients, WebRTC/Socket.IO paths, touch controls and an eight-player scene. This is not a claim of testing a separate physical phone or laptop. Use the host's printed LAN address on a second device for physical Wi-Fi acceptance.
+
+The new game defaults to TCP **4175** and WebRTC UDP **53140–53171**, separate from the original game's default ports. `PORT`, `GAME_WEBRTC_UDP_PORT_MIN`, and `GAME_WEBRTC_UDP_PORT_MAX` can override these when needed. See `docs/acceptance-3d.md` for the recorded checks.
