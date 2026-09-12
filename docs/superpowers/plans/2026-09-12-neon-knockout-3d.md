@@ -22,7 +22,7 @@ Work only in /Users/serkances/dev/neon-knockout-3d. Preserve /Users/serkances/de
 - [x] Task 2: replace the renderer with authored 3D fighters, arena, animation, input and audio integration.
 - [x] Task 3: integrate previews, ability descriptions, HUD and Turkish product identity.
 - [x] Task 4a: browser acceptance, scoped review, fix findings and document evidence.
-- [ ] Task 4b: push verified main to the new GitHub repository and verify parity.
+- [x] Task 4b: published main to https://github.com/reitenji/neon-knockout-3d; first release f17e10d, verified 0/0 local/remote parity.
 
 ## Context and Orientation
 
@@ -72,4 +72,4 @@ The old checkout and upstream remote are read-only sources. Never clean or reset
 
 ## Outcomes & Retrospective
 
-Implementation passed 610 tests, the eight-client load gate, lint, type checks and production build. Sixteen distinct browser checks cover Chromium combat/UI, performance, WebKit touch and the 20 ms simulated RTT tier. Scoped review fixed PULSE spawn-protection cancellation, return-animation timing and the visible protection cue. Production /health returned HTTP 200 via loopback and the private LAN address. See docs/acceptance-3d.md for measurements and the explicit physical-device acceptance limit. Implementation is committed as a51154c. The independent public GitHub repository reitenji/neon-knockout-3d has been created; pushing main and checking parity remain.
+Implementation passed 610 tests, the eight-client load gate, lint, type checks and production build. Sixteen distinct browser checks cover Chromium combat/UI, performance, WebKit touch and the 20 ms simulated RTT tier. Scoped review fixed PULSE spawn-protection cancellation, return-animation timing and the visible protection cue. Production /health returned HTTP 200 via loopback and the private LAN address. See docs/acceptance-3d.md for measurements and the explicit physical-device acceptance limit. Implementation is committed as a51154c. Published to independent public repository https://github.com/reitenji/neon-knockout-3d on main; first release f17e10d verified with 0/0 local/remote parity. Final documentation records this completed result. The new production host remains available on port 4175.
