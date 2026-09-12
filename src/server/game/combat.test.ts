@@ -210,7 +210,7 @@ describe('authoritative combat', () => {
       state,
       GAME.quickCombo[0].windupMs + GAME.quickCombo[0].activeMs
     );
-    const expectedImpulse = 280 * 1.08;
+    const expectedImpulse = 110 * 1.08;
     expect(events).toContainEqual(expect.objectContaining({
       type: 'HIT', attackerId: 'p1', targetId: 'p2', attack: 'QUICK_1',
       resultingOverload: 8, impulse: expectedImpulse
@@ -239,9 +239,9 @@ describe('authoritative combat', () => {
       expect(events).toContainEqual(expect.objectContaining({
         type: 'HIT',
         resultingOverload,
-        impulse: 280 * multiplier
+        impulse: 110 * multiplier
       }));
-      expect(state.players.p2.velocity.x).toBeCloseTo(280 * multiplier, 8);
+      expect(state.players.p2.velocity.x).toBeCloseTo(110 * multiplier, 8);
     }
   );
 

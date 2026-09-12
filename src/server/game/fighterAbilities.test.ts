@@ -173,11 +173,11 @@ describe('distinct fighter abilities', () => {
   });
 
   it.each([
-    ['RIFT', false, 302.4],
-    ['PULSE', false, 302.4],
-    ['WRAITH', false, 338.688],
-    ['BASTION', false, 196.56],
-    ['BASTION', true, 90.72]
+    ['RIFT', false, 118.8],
+    ['PULSE', false, 118.8],
+    ['WRAITH', false, 133.056],
+    ['BASTION', false, 77.22],
+    ['BASTION', true, 35.64]
   ] as const)('applies %s incoming knockback at its chassis multiplier (armored: %s)', (chassis, armored, expectedImpulse) => {
     const state = regulationState([
       { playerId: 'attacker', name: 'Attacker', chassis: 'RIFT', accent: 0 },

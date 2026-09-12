@@ -65,6 +65,10 @@ export function advanceKinematics(
       target,
       GAME.groundAcceleration * options.steeringScale * elapsedSeconds
     );
+  } else if (Math.hypot(velocity.x, velocity.y) <= options.moveSpeed &&
+    options.voidPull.x === 0 && options.voidPull.y === 0) {
+    // A released walking input plants the feet; strong launches and void drift keep their decay.
+    velocity = accelerateTowards(velocity, { x: 0, y: 0 }, GAME.groundDrag * elapsedSeconds);
   } else {
     const dragFactor = Math.exp((-GAME.groundDrag / options.moveSpeed) * elapsedSeconds);
     velocity = { x: velocity.x * dragFactor, y: velocity.y * dragFactor };
