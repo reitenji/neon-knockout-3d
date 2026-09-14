@@ -9,6 +9,8 @@ import { createHudSnapshotStore } from './HudSnapshotStore.js';
 type MatchHudProps = Readonly<{
   bridge: GamePresentationBridge;
   localPlayerId: string;
+  spectator?: boolean;
+  botPlayerIds?: readonly string[];
 }>;
 
 const PHASE_LABELS: Readonly<Record<MatchPhase, string>> = {
@@ -137,10 +139,12 @@ function pingPresentation(network: PlayerNetworkStatus | undefined): Readonly<{
 
 function PlayerRoster({
   snapshot,
-  localPlayerId
+  localPlayerId,
+  botPlayerIds
 }: Readonly<{
   snapshot: MatchSnapshot;
   localPlayerId: string;
+  botPlayerIds: readonly string[];
 }>) {
   const ranking = [...snapshot.players].sort((left, right) => {
     const scoreDifference = (snapshot.scores[right.playerId] ?? 0) - (snapshot.scores[left.playerId] ?? 0);
@@ -159,7 +163,7 @@ function PlayerRoster({
         {ranking.map((player) => {
           const local = player.playerId === localPlayerId;
           const score = snapshot.scores[player.playerId] ?? 0;
-          const ping = pingPresentation(snapshot.network[player.playerId]);
+          const ping = botPlayerIds.includes(player.playerId) ? { pingLabel: 'Bot', tier: 'pending' } : pingPresentation(snapshot.network[player.playerId]);
           const accentStyle = { '--player-accent': ACCENTS[player.accent] } as CSSProperties;
           return (
             <li key={player.playerId} className={local ? 'is-local' : undefined} style={accentStyle}>
@@ -195,10 +199,10 @@ function ControlsHint() {
   );
 }
 
-export function MatchHud({ bridge, localPlayerId }: MatchHudProps) {
+export function MatchHud({ bridge, localPlayerId, spectator = false, botPlayerIds = [] }: MatchHudProps) {
   const snapshot = useMatchSnapshot(bridge);
   const connected = useConnection(bridge);
-  const localPlayer = snapshot?.players.find((player) => player.playerId === localPlayerId) ?? null;
+  const localPlayer = spectator ? null : snapshot?.players.find((player) => player.playerId === localPlayerId) ?? null;
   const announcement = snapshot ? phaseAnnouncement(snapshot) : null;
   const overload = localPlayer ? Math.round(clamp(localPlayer.overload, 0, GAME.maxOverload)) : 0;
   const dashProgress = localPlayer
@@ -216,6 +220,7 @@ export function MatchHud({ bridge, localPlayerId }: MatchHudProps) {
         <>
           <header className="match-hud__clock">
             <span>{PHASE_LABELS[snapshot.phase]}</span>
+            {spectator ? <strong className="match-hud__spectator">Seyirci</strong> : null}
             <time role="timer" aria-label="Kalan süre" dateTime={`PT${Math.ceil(snapshot.remainingMs / 1_000)}S`}>
               {formatTime(snapshot.remainingMs)}
             </time>
@@ -232,6 +237,7 @@ export function MatchHud({ bridge, localPlayerId }: MatchHudProps) {
           <PlayerRoster
             snapshot={snapshot}
             localPlayerId={localPlayerId}
+            botPlayerIds={botPlayerIds}
           />
 
           {localPlayer ? (
@@ -289,7 +295,7 @@ export function MatchHud({ bridge, localPlayerId }: MatchHudProps) {
         {connected ? 'Bağlı' : 'Bağlantı kesildi'}
       </div>
 
-      <ControlsHint />
+      {!spectator ? <ControlsHint /> : null}
 
       {snapshot?.phase === 'SUDDEN_DEATH' ? <SuddenDeathAnnouncement /> : null}
       {snapshot?.phase !== 'SUDDEN_DEATH' && announcement ? <PhaseAnnouncement announcement={announcement} /> : null}

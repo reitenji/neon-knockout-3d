@@ -129,7 +129,7 @@ export class ThreeGame {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.2;
     this.renderer.domElement.className = 'game-canvas';
@@ -152,7 +152,16 @@ export class ThreeGame {
       }
       if (event.type === 'RESULT') { this.resultPresented = true; this.clearPulseViews(); }
       const snapshot = bridge.getSnapshot();
-      if (snapshot) this.effects.ingest(event, snapshot);
+      if (snapshot) {
+        this.effects.ingest(event, snapshot);
+        if (event.type === 'HIT') {
+          const attacker = snapshot.players.find(player => player.playerId === event.attackerId);
+          if (attacker) {
+            this.views.get(event.targetId)?.contact(event, attacker.position);
+            this.views.get(event.attackerId)?.contact(event, attacker.position);
+          }
+        }
+      }
       this.gameAudio.playEvent(event);
     }), bridge.subscribeMuted((muted) => this.gameAudio.setMuted(muted)));
     const resize = (): void => {

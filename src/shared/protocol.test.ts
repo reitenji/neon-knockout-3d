@@ -128,7 +128,8 @@ describe('shared input boundary protocol', () => {
   it('normalizes valid room codes and rejects invalid codes for join and resume', () => {
     expect(protocol.roomJoinSchema.parse({ name: 'Ada', roomCode: ' ab2z ' })).toEqual({
       name: 'Ada',
-      roomCode: 'AB2Z'
+      roomCode: 'AB2Z',
+      role: 'FIGHTER'
     });
     expect(protocol.sessionResumeSchema.parse({ roomCode: ' ab2z ', resumeToken: 'token' })).toEqual({
       roomCode: 'AB2Z',
@@ -139,7 +140,7 @@ describe('shared input boundary protocol', () => {
   });
 
   it('uses a strict chassis selection payload', () => {
-    expect(CHASSIS).toEqual(['RIFT', 'BASTION', 'PULSE', 'WRAITH']);
+    expect(CHASSIS).toEqual(['RIFT', 'BASTION', 'PULSE', 'WRAITH', 'EMBER', 'VOLT', 'TITAN', 'NOVA']);
     expect(protocol.lobbyChassisSchema.parse({ chassis: 'RIFT' })).toEqual({ chassis: 'RIFT' });
     expect(protocol.lobbyChassisSchema.safeParse({ chassis: 'RIFT', ignored: true }).success).toBe(false);
     expect(protocol.lobbyChassisSchema.safeParse({ chassis: 'MAGE' }).success).toBe(false);
@@ -197,6 +198,7 @@ describe('shared input boundary protocol', () => {
       settings: DEFAULT_ROOM_SETTINGS,
       players: [
         {
+          role: 'FIGHTER', botDifficulty: null,
           playerId: 'p1', name: 'Ada', chassis: 'RIFT', accent: 0, ready: true, connected: true,
           reconnectRemainingMs: null,
           stats: { knockouts: 1, falls: 0, landedHits: 2, completedAttacks: 3 }

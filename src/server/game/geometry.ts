@@ -125,8 +125,21 @@ export function nearestEdgeNormal(point: Vec2, vertices: readonly Vec2[]): Vec2 
   );
 }
 
-export function isKnockedOut(point: Vec2, platform: PolygonGeometry, threshold = 80): boolean {
+export function isKnockedOut(point: Vec2, platform: PolygonGeometry, threshold = 0): boolean {
   return distanceToPolygon(point, platform.vertices) > threshold;
+}
+
+/** Anchor the fall at the crossed visible edge, including a fast tick's overshoot. */
+export function platformExitPoint(from: Vec2, to: Vec2, vertices: readonly Vec2[]): Vec2 {
+  if (!pointInConvexPolygon(from, vertices)) return closestPointOnPolygon(to, vertices);
+  let inside = from;
+  let outside = to;
+  for (let iteration = 0; iteration < 32; iteration += 1) {
+    const midpoint = lerp(inside, outside, 0.5);
+    if (pointInConvexPolygon(midpoint, vertices)) inside = midpoint;
+    else outside = midpoint;
+  }
+  return closestPointOnPolygon(inside, vertices);
 }
 
 export function separateCircles(

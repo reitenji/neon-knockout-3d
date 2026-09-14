@@ -8,6 +8,7 @@ import { LobbyScreen } from './LobbyScreen.js';
 
 function player(overrides: Partial<RoomPlayer> = {}): RoomPlayer {
   return {
+    role: 'FIGHTER', botDifficulty: null,
     playerId: 'player-1', name: 'Ada', chassis: 'RIFT', accent: 0, ready: false, connected: true,
     reconnectRemainingMs: null,
     stats: { knockouts: 0, falls: 0, landedHits: 0, completedAttacks: 0 },
@@ -18,7 +19,7 @@ function room(overrides: Partial<RoomState> = {}): RoomState {
   return {
     roomCode: 'AB2Z', phase: 'LOBBY', hostPlayerId: 'player-1', pauseRemainingMs: null, result: null,
     settings: DEFAULT_ROOM_SETTINGS,
-    players: [player(), player({ playerId: 'player-2', name: 'Linus', chassis: 'BASTION', accent: 1, ready: true })],
+    players: [player(), player({ role: 'FIGHTER', botDifficulty: null, playerId: 'player-2', name: 'Linus', chassis: 'BASTION', accent: 1, ready: true })],
     ...overrides
   };
 }
@@ -34,6 +35,10 @@ function renderLobby(clientState = state(), handlers: Partial<Parameters<typeof 
   vi.stubGlobal('fetch', () => new Promise<Response>(() => undefined));
   const props: Parameters<typeof LobbyScreen>[0] = {
     state: clientState,
+    onSetRole: vi.fn(async () => undefined),
+    onAddBot: vi.fn(async () => undefined),
+    onUpdateBot: vi.fn(async () => undefined),
+    onRemoveBot: vi.fn(async () => undefined),
     onSetChassis: vi.fn(async () => undefined),
     onToggleReady: vi.fn(async () => undefined),
     onSetRoomSettings: vi.fn(async () => undefined),
@@ -48,11 +53,12 @@ describe('LobbyScreen', () => {
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
   });
 
   it('renders four meaningful chassis silhouette buttons and no grouped color columns', () => {
     renderLobby();
-    for (const chassis of ['RIFT', 'BASTION', 'PULSE', 'WRAITH']) {
+    for (const chassis of ['RIFT', 'BASTION', 'PULSE', 'WRAITH', 'EMBER', 'VOLT', 'TITAN', 'NOVA']) {
       const button = screen.getByRole('button', { name: `${chassis} gövdesini seç` });
       expect(button.querySelector('.chassis-silhouette')).not.toBeNull();
     }
@@ -185,4 +191,31 @@ describe('LobbyScreen', () => {
     fireEvent.click(copy);
     expect(onCopyRoomCode).toHaveBeenCalledOnce();
   });
+});
+
+
+describe('Sites room invitations', () => {
+  afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
+
+  it('copies the full invite URL for a guest without opening native sharing', async () => {
+    vi.stubEnv('MODE', 'sites');
+    const writeText = vi.fn(async () => undefined);
+    const share = vi.fn();
+    vi.stubGlobal('navigator', { clipboard: { writeText }, share });
+    renderLobby(state({ room: room({ hostPlayerId: 'player-2' }) }));
+    fireEvent.click(screen.getByRole('button', { name: 'Oda Linkini Kopyala' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('Link kopyalandı');
+    expect(writeText).toHaveBeenCalledWith('http://localhost:3000/room/AB2Z');
+    expect(share).not.toHaveBeenCalled();
+  });
+
+  it('leaves the link selectable when clipboard access fails', async () => {
+    vi.stubEnv('MODE', 'sites');
+    vi.stubGlobal('navigator', { clipboard: { writeText: async () => { throw new Error('denied'); } } });
+    renderLobby();
+    fireEvent.click(screen.getByRole('button', { name: 'Oda Linkini Kopyala' }));
+    expect(await screen.findByRole('status')).toHaveTextContent(/linki seçip kopyalayabilirsin/i);
+    expect(screen.getByRole('textbox', { name: 'Oda linki' })).toHaveValue('http://localhost:3000/room/AB2Z');
+  });
+
 });

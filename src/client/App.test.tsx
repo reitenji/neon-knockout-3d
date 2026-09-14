@@ -26,6 +26,10 @@ function storeFor(state: ClientState): GameStore {
       connect: vi.fn(),
       createRoom: vi.fn(async () => undefined),
       joinRoom: vi.fn(async () => undefined),
+      setRole: vi.fn(async () => undefined),
+      addBot: vi.fn(async () => undefined),
+      updateBot: vi.fn(async () => undefined),
+      removeBot: vi.fn(async () => undefined),
       setChassis: vi.fn(async () => undefined),
       setReady: vi.fn(async () => undefined),
       setRoomSettings: vi.fn(async () => undefined),
@@ -219,6 +223,7 @@ describe('App', () => {
           winnerPlayerId: 'p-1',
           reason: 'TARGET_SCORE',
           players: [{
+            role: 'FIGHTER', botDifficulty: null,
             playerId: 'p-1', name: 'Ada', chassis: 'RIFT', accent: 0, ready: false, connected: true,
             reconnectRemainingMs: null, resultStatus: 'WAITING',
             stats: { knockouts: 5, falls: 1, landedHits: 8, completedAttacks: 10 }
@@ -226,6 +231,7 @@ describe('App', () => {
         },
         settings: DEFAULT_ROOM_SETTINGS,
         players: [{
+          role: 'FIGHTER', botDifficulty: null,
           playerId: 'p-1', name: 'Ada', chassis: 'RIFT', accent: 0, ready: false, connected: true,
           reconnectRemainingMs: null, stats: { knockouts: 5, falls: 1, landedHits: 8, completedAttacks: 10 }
         }]
@@ -246,6 +252,7 @@ describe('App', () => {
         roomCode: 'AB2Z', phase: 'LOBBY', hostPlayerId: 'p-1', pauseRemainingMs: null, result: null,
         settings: DEFAULT_ROOM_SETTINGS,
         players: [{
+          role: 'FIGHTER', botDifficulty: null,
           playerId: 'p-1', name: 'Ada', chassis: 'RIFT', accent: 0, ready: false, connected: true,
           reconnectRemainingMs: null, stats: { knockouts: 0, falls: 0, landedHits: 0, completedAttacks: 0 }
         }]
@@ -270,6 +277,7 @@ describe('App', () => {
         roomCode: 'AB2Z', phase: 'LOBBY', hostPlayerId: 'p-1', pauseRemainingMs: null, result: null,
         settings: DEFAULT_ROOM_SETTINGS,
         players: [{
+          role: 'FIGHTER', botDifficulty: null,
           playerId: 'p-1', name: 'Ada', chassis: 'RIFT', accent: 0, ready: false, connected: true,
           reconnectRemainingMs: null, stats: { knockouts: 0, falls: 0, landedHits: 0, completedAttacks: 0 }
         }]

@@ -13,7 +13,9 @@ if (!rootElement) {
   throw new Error('MISSING_ROOT');
 }
 
-const client = createSocketGameClient();
+const client = import.meta.env.MODE === 'sites'
+  ? (await import('./network/BrowserHostClient.js')).createBrowserHostClient()
+  : createSocketGameClient();
 const clipboard: Pick<Clipboard, 'writeText'> = {
   async writeText(value: string): Promise<void> {
     if (navigator.clipboard?.writeText) {

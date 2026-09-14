@@ -31,12 +31,12 @@ describe('deterministic knockout geometry', () => {
     expect(distanceToPolygon({ x: 640, y: 50 }, vertices)).toBe(40);
   });
 
-  it('uses the nearest outward edge normal and 80-pixel knockout threshold', () => {
+  it('uses the nearest outward edge normal and visible platform edge', () => {
     const platform = platformAt(0);
 
     expect(nearestEdgeNormal({ x: 640, y: 50 }, platform.vertices)).toEqual({ x: 0, y: -1 });
-    expect(isKnockedOut({ x: 640, y: 10 }, platform)).toBe(false);
-    expect(isKnockedOut({ x: 640, y: 9 }, platform)).toBe(true);
-    expect(GAME.knockoutDistance).toBe(80);
+    expect(isKnockedOut({ x: 640, y: 90 }, platform)).toBe(false);
+    expect(isKnockedOut({ x: 640, y: 89.9 }, platform)).toBe(true);
+    expect(GAME.knockoutDistance).toBe(0);
   });
 });

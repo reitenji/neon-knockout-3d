@@ -18,7 +18,7 @@ export type FighterDefinition = Readonly<{
   burstBaseImpulse?: number;
 }>;
 
-export const FIGHTERS = Object.freeze({
+export const FIGHTERS: Readonly<Record<Chassis, FighterDefinition>> = Object.freeze({
   RIFT: Object.freeze({
     name: 'RIFT',
     role: 'Düellocu',
@@ -74,5 +74,32 @@ export const FIGHTERS = Object.freeze({
     dashInvulnerabilityMs: 190,
     dashCooldownMs: 1_550,
     knockbackMultiplier: 1.12
+  }),
+  EMBER: Object.freeze({
+    name: 'EMBER', role: 'Patlayıcı', abilityName: 'Fırın Patlaması',
+    description: 'Kısa hücum başlarken yakınındaki rakiplere güçlü bir ısı darbesi vurur.',
+    color: '#FF753D', moveSpeed: 300, dashSpeed: 560, dashDurationMs: 150,
+    dashInvulnerabilityMs: 0, dashCooldownMs: 1_900, knockbackMultiplier: 0.9,
+    burstRadius: 90, burstOverloadGain: 12, burstBaseImpulse: 330
+  }),
+  VOLT: Object.freeze({
+    name: 'VOLT', role: 'Sprinter', abilityName: 'Şimşek Adımı',
+    description: 'Çok kısa ve hızlı bir kaçış yapar; hücumu çabuk yeniden dolar.',
+    color: '#F8DD45', moveSpeed: 380, dashSpeed: 1_050, dashDurationMs: 100,
+    dashInvulnerabilityMs: 70, dashCooldownMs: 950, knockbackMultiplier: 1.18
+  }),
+  TITAN: Object.freeze({
+    name: 'TITAN', role: 'Ağır Zırh', abilityName: 'Çelik Duruş',
+    description: 'Ağır adımlarla ilerlerken savrulmaya direnir. %250 hasarda zırhı da yetmez.',
+    color: '#96CF64', moveSpeed: 250, dashSpeed: 220, dashDurationMs: 350,
+    dashInvulnerabilityMs: 0, dashCooldownMs: 2_000, knockbackMultiplier: 0.55,
+    armoredDashKnockbackMultiplier: 0.22
+  }),
+  NOVA: Object.freeze({
+    name: 'NOVA', role: 'Yörünge Kontrolü', abilityName: 'Yıldız Dalgası',
+    description: 'Geniş bir alandaki rakipleri hafifçe iten dalgayla mesafe açar.',
+    color: '#79ABFF', moveSpeed: 290, dashSpeed: 480, dashDurationMs: 160,
+    dashInvulnerabilityMs: 40, dashCooldownMs: 2_100, knockbackMultiplier: 1.05,
+    burstRadius: 180, burstOverloadGain: 6, burstBaseImpulse: 210
   })
-} satisfies Readonly<Record<Chassis, FighterDefinition>>);
+});

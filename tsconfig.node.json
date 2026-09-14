@@ -1,7 +1,9 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022"],
+    "lib": [
+      "ES2022"
+    ],
     "skipLibCheck": true,
     "esModuleInterop": true,
     "strict": true,
@@ -11,5 +13,11 @@
     "isolatedModules": true,
     "noEmit": true
   },
-  "include": ["*.config.ts", "src/server"]
+  "include": [
+    "*.config.ts",
+    "src/server",
+    "src/sites",
+    "scripts/site-preview.ts",
+    "scripts/lib"
+  ]
 }

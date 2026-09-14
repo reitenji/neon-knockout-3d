@@ -44,13 +44,14 @@ export const GAME = Object.freeze({
   perfectDodgeRefundMs: 550,
   quickClashRecoil: 90,
   heavyClashRecoil: 150,
-  maxOverload: 150,
+  maxOverload: 250,
   knockoutToControlMs: 600,
   respawnProtectionMs: 650,
   reconnectWarpMs: 180,
   voidRecoverySteerMultiplier: 0.45,
   voidPullAcceleration: 360,
-  knockoutDistance: 80,
+  knockoutDistance: 0,
+  criticalImpulse: 11_000,
   quickBufferMs: 120,
   heavyMaxChargeMs: 450,
   heavyChargeMoveMultiplier: 0.55,
@@ -66,7 +67,7 @@ export const GAME = Object.freeze({
     Object.freeze({
       step: 1,
       overloadGain: 8,
-      baseImpulse: 280,
+      baseImpulse: 110,
       windupMs: 70,
       activeMs: 60,
       recoveryMs: 100
@@ -74,7 +75,7 @@ export const GAME = Object.freeze({
     Object.freeze({
       step: 2,
       overloadGain: 10,
-      baseImpulse: 325,
+      baseImpulse: 150,
       windupMs: 65,
       activeMs: 65,
       recoveryMs: 120

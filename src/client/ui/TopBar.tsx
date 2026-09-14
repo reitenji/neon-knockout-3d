@@ -23,7 +23,7 @@ export function TopBar({ state, onToggleSound, onLeaveRoom }: TopBarProps) {
             <strong>{state.room.roomCode}</strong>
           </>
         ) : (
-          'LAN ARENA'
+          import.meta.env.MODE === 'sites' ? 'İNTERNET DENEMESİ' : 'LAN ARENA'
         )}
       </span>
 

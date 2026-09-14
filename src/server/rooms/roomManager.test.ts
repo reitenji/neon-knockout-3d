@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { GAME } from '../../shared/constants.js';
 import { DEFAULT_ROOM_SETTINGS } from '../../shared/roomSettings.js';
-import type { Chassis, InputFrame, MatchSnapshot, RoomState } from '../../shared/model.js';
+import { CHASSIS, type Chassis, type InputFrame, type MatchSnapshot, type RoomState } from '../../shared/model.js';
 import { DomainError } from './domainError.js';
 import { RoomManager, type RoomManagerTestHarness, type RoomPublication } from './roomManager.js';
 
@@ -211,7 +211,7 @@ describe('RoomManager FFA lifecycle', () => {
     const state = subject.roomState(firstRoom.roomCode);
     expect(state.players.map((player) => player.accent)).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
     expect(state.players.map((player) => player.chassis)).toEqual([
-      'RIFT', 'BASTION', 'PULSE', 'WRAITH', 'RIFT', 'BASTION', 'PULSE', 'WRAITH'
+      'RIFT', 'BASTION', 'PULSE', 'WRAITH', 'EMBER', 'VOLT', 'TITAN', 'NOVA'
     ]);
 
     subject.manager.disconnect('first-3');
@@ -976,49 +976,49 @@ describe('RoomManager FFA lifecycle', () => {
       players: [
         {
           playerId: players[0].playerId,
-          position: { x: 1_139, y: 360 },
+          position: { x: 1050, y: 360 },
           facing: { x: 1, y: 0 },
           overload: 0
         },
         {
           playerId: players[1].playerId,
-          position: { x: 1_208, y: 360 },
+          position: { x: 1110, y: 360 },
           facing: { x: 1, y: 0 },
           overload: GAME.maxOverload
         },
         {
           playerId: players[2].playerId,
-          position: { x: 141, y: 360 },
+          position: { x: 230, y: 360 },
           facing: { x: -1, y: 0 },
           overload: 0
         },
         {
           playerId: players[3].playerId,
-          position: { x: 82, y: 360 },
+          position: { x: 170, y: 360 },
           facing: { x: -1, y: 0 },
           overload: GAME.maxOverload
         },
         {
           playerId: players[4].playerId,
-          position: { x: 640, y: 91 },
+          position: { x: 640, y: 180 },
           facing: { x: 0, y: -1 },
           overload: 0
         },
         {
           playerId: players[5].playerId,
-          position: { x: 640, y: 22 },
+          position: { x: 640, y: 120 },
           facing: { x: 0, y: -1 },
           overload: GAME.maxOverload
         },
         {
           playerId: players[6].playerId,
-          position: { x: 640, y: 629 },
+          position: { x: 640, y: 540 },
           facing: { x: 0, y: 1 },
           overload: 0
         },
         {
           playerId: players[7].playerId,
-          position: { x: 640, y: 688 },
+          position: { x: 640, y: 600 },
           facing: { x: 0, y: 1 },
           overload: GAME.maxOverload
         }
@@ -1108,5 +1108,84 @@ describe('RoomManager FFA lifecycle', () => {
     expect(subject.publications.filter(
       (publication) => publication.type === 'ROOM_CLOSED' && publication.roomCode === host.roomCode
     )).toHaveLength(1);
+  });
+});
+
+describe('bots and spectators', () => {
+  function watch(count = 8) {
+    const s = fixture();
+    const host = s.manager.createRoom('host', 'Watcher');
+    s.manager.setRole('host', 'SPECTATOR');
+    for (let i = 0; i < count; i++) s.manager.addBot('host', CHASSIS[i % CHASSIS.length]!, 'NORMAL');
+    return { ...s, host, code: host.roomCode };
+  }
+
+  it('keeps eight fighter slots separate from spectators and prevents overfilling via role changes', () => {
+    const s = watch();
+    expect(s.roomState(s.code).players.filter(p => p.role === 'FIGHTER')).toHaveLength(8);
+    expectErrorCode(() => s.manager.addBot('host', 'RIFT', 'HARD'), 'ROOM_FULL');
+    expectErrorCode(() => s.manager.setRole('host', 'FIGHTER'), 'ROOM_FULL');
+    for (let i = 0; i < 7; i++) s.manager.joinRoom(`watch${i}`, s.code, `W${i}`, 'SPECTATOR');
+    expectErrorCode(() => s.manager.joinRoom('ninth', s.code, 'Extra', 'SPECTATOR'), 'ROOM_FULL');
+    const bot = s.roomState(s.code).players.find(p => p.botDifficulty)!;
+    s.manager.removeBot('host', bot.playerId);
+    s.manager.setRole('host', 'FIGHTER');
+    expect(new Set(s.roomState(s.code).players.filter(p => p.role === 'FIGHTER').map(p => p.accent)).size).toBe(8);
+  });
+
+  it('restricts bot management to the host and makes bot settings effective', () => {
+    const s = watch(2);
+    s.manager.joinRoom('guest', s.code, 'Guest', 'SPECTATOR');
+    const bot = s.roomState(s.code).players.find(p => p.botDifficulty)!;
+    for (const action of [() => s.manager.addBot('guest', 'RIFT', 'EASY'), () => s.manager.removeBot('guest', bot.playerId), () => s.manager.updateBot('guest', bot.playerId, 'PULSE', 'HARD')]) expectErrorCode(action, 'NOT_HOST');
+    s.manager.updateBot('host', bot.playerId, 'PULSE', 'HARD');
+    expect(s.roomState(s.code).players.find(p => p.playerId === bot.playerId)).toMatchObject({ chassis: 'PULSE', botDifficulty: 'HARD', ready: true });
+    s.manager.setRoomSettings('host', { durationMs: 90_000, knockoutTarget: 3 });
+    s.manager.startMatch('host');
+    expectErrorCode(() => s.manager.removeBot('host', bot.playerId), 'INVALID_PHASE');
+  });
+
+  it('excludes spectators from gameplay and supports joining and leaving an active match', () => {
+    const s = watch(2);
+    s.manager.startMatch('host');
+    const joined = s.manager.joinRoom('late', s.code, 'Late', 'SPECTATOR');
+    expect(s.manager.currentMatchPublication('late')?.snapshot.players).toHaveLength(2);
+    expectErrorCode(() => s.manager.applyInput('late', idleInput(0)), 'SPECTATOR_ACTION');
+    expectErrorCode(() => s.manager.setReady('host', true), 'SPECTATOR_ACTION');
+    expectErrorCode(() => s.manager.setRole('late', 'FIGHTER'), 'INVALID_PHASE');
+    s.manager.disconnect('late');
+    expect(s.roomState(s.code).players.some(p => p.playerId === joined.playerId)).toBe(false);
+    advanceCountdown(s);
+    expect(s.snapshot(s.code).phase).toBe('REGULATION');
+    expect(s.snapshot(s.code).players.some(p => p.playerId === s.host.playerId)).toBe(false);
+  });
+
+  it('keeps host ownership human and destroys bots when the last human leaves', () => {
+    const s = watch(2);
+    const guest = s.manager.joinRoom('guest', s.code, 'Guest', 'SPECTATOR');
+    s.manager.startMatch('host');
+    s.manager.disconnect('host');
+    expect(s.roomState(s.code).hostPlayerId).toBe(guest.playerId);
+    s.manager.leaveRoom('guest');
+    expect(s.manager.debugRoom(s.code)).toBeNull();
+  });
+
+  it('runs eight bots through natural combat, scoring, results and a spectator-host rematch', () => {
+    const s = watch();
+    s.manager.setRoomSettings('host', { durationMs: 90_000, knockoutTarget: 3 });
+    s.manager.startMatch('host');
+    for (let i = 0; i < 3600 && s.roomState(s.code).phase !== 'RESULT'; i++) {
+      s.clock.advance(50); s.manager.advance(50);
+    }
+    const result = s.roomState(s.code);
+    expect(result.phase).toBe('RESULT');
+    expect(result.result?.players).toHaveLength(8);
+    expect(result.result!.players.reduce((sum, p) => sum + p.stats.landedHits, 0)).toBeGreaterThan(20);
+    expect(result.result!.players.reduce((sum, p) => sum + p.stats.knockouts, 0)).toBeGreaterThan(0);
+    expect(result.result!.players.every(p => p.ready && p.botDifficulty !== null)).toBe(true);
+    expectErrorCode(() => s.manager.setResultReady('host', true), 'SPECTATOR_ACTION');
+    s.manager.startMatch('host');
+    expect(s.snapshot(s.code).players).toHaveLength(8);
+    expect(Object.values(s.snapshot(s.code).scores)).toEqual(Array(8).fill(0));
   });
 });

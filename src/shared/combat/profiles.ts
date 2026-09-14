@@ -34,14 +34,14 @@ const QUICK_1 = profile({
   id: 'quick-1', attack: 'QUICK_1', windupMs: 70, activeMs: 60, recoveryMs: 100,
   originOffset: { x: 22, y: 0 },
   weaponPath: [{ x: 12, y: -32 }, { x: 36, y: -16 }, { x: 40, y: 8 }, { x: 20, y: 32 }],
-  thickness: 12, reach: 75, overloadGain: 8, baseImpulse: 280,
+  thickness: 12, reach: 75, overloadGain: 8, baseImpulse: 110,
 });
 
 const QUICK_2 = profile({
   id: 'quick-2', attack: 'QUICK_2', windupMs: 65, activeMs: 65, recoveryMs: 120,
   originOffset: { x: 22, y: 0 },
   weaponPath: [{ x: 20, y: 34 }, { x: 42, y: 14 }, { x: 38, y: -14 }, { x: 14, y: -34 }],
-  thickness: 12, reach: 76, overloadGain: 10, baseImpulse: 325,
+  thickness: 12, reach: 76, overloadGain: 10, baseImpulse: 150,
 });
 
 const QUICK_3 = profile({

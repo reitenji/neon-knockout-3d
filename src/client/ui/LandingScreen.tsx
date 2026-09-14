@@ -1,11 +1,12 @@
 import { useState, type FormEvent } from 'react';
+import type { PlayerRole } from '../../shared/model.js';
 import type { ClientState } from '../state/gameStore.js';
 
 type LandingScreenProps = Readonly<{
   state: ClientState;
   invitedRoomCode?: string | null;
   onCreateRoom: (name: string) => Promise<void>;
-  onJoinRoom: (name: string, roomCode: string) => Promise<void>;
+  onJoinRoom: (name: string, roomCode: string, role?: PlayerRole) => Promise<void>;
   onExitInvite?: () => void;
 }>;
 
@@ -14,6 +15,7 @@ function ActionMark({ pending, idle }: Readonly<{ pending: boolean; idle: string
 }
 
 function networkMessage(): string {
+  if (import.meta.env.MODE === 'sites') return 'İnternet bağlantısı denemesi: farklı ağlardan katılabilirsiniz; her ağda çalışmayabilir. Odayı kuran kişinin sekmesi kapanırsa maç biter.';
   const loopbackHosts = new Set(['localhost', '127.0.0.1']);
   if (loopbackHosts.has(window.location.hostname)) {
     return 'Misafirler localhost yerine bu bilgisayarın LAN adresini açmalı; localhost sadece bu cihazda çalışır.';
@@ -29,6 +31,7 @@ export function LandingScreen({
   onExitInvite
 }: LandingScreenProps) {
   const [playerName, setPlayerName] = useState('');
+  const [role, setRole] = useState<PlayerRole>('FIGHTER');
   const [roomCode, setRoomCode] = useState('');
   const anyPending = state.pendingAction !== null;
   const createPending = state.pendingAction === 'create-room';
@@ -43,13 +46,13 @@ export function LandingScreen({
   const submitPrimary = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
     if (anyPending) return;
-    if (invitedRoomCode) void onJoinRoom(playerName, invitedRoomCode);
+    if (invitedRoomCode) void (role === 'SPECTATOR' ? onJoinRoom(playerName, invitedRoomCode, role) : onJoinRoom(playerName, invitedRoomCode));
     else void onCreateRoom(playerName);
   };
 
   const submitJoin = (): void => {
     if (anyPending) return;
-    void onJoinRoom(playerName, roomCode);
+    void (role === 'SPECTATOR' ? onJoinRoom(playerName, roomCode, role) : onJoinRoom(playerName, roomCode));
   };
 
   return (
@@ -60,7 +63,7 @@ export function LandingScreen({
         </div>
 
         <div className="landing-heading">
-          <p className="eyebrow">LAN ARENA</p>
+          <p className="eyebrow">{import.meta.env.MODE === 'sites' ? 'İNTERNET DENEMESİ' : 'LAN ARENA'}</p>
           <h1 id="landing-title">NEON KNOCKOUT <span className="title-3d">3D</span></h1>
         </div>
 
@@ -73,7 +76,7 @@ export function LandingScreen({
             <div className="landing-invite" aria-label={`${invitedRoomCode} oda daveti`}>
               <span>Oda daveti</span>
               <strong>{invitedRoomCode}</strong>
-              <small>Adını gir, doğrudan lobiye katıl.</small>
+              <small>Adını gir, oyuncu veya seyirci olarak katıl.</small>
             </div>
           ) : null}
 
@@ -121,6 +124,14 @@ export function LandingScreen({
             </>
           ) : null}
 
+          <label className="room-settings__field landing-role">
+            <span>Katılma biçimi</span>
+            <select className="focus-ring" value={role} disabled={anyPending} onChange={(event) => setRole(event.currentTarget.value as PlayerRole)}>
+              <option value="FIGHTER">Oyuncu</option>
+              <option value="SPECTATOR">Seyirci</option>
+            </select>
+          </label>
+
           <button
             className="command-button command-button--amber focus-ring"
             type={inviteMode ? 'submit' : 'button'}
@@ -158,7 +169,7 @@ export function LandingScreen({
         </form>
 
         <p className="landing-network" data-testid="network-origin">{networkMessage()}</p>
-        <p className="landing-tagline">Aynı ağdaki arkadaşlarınla oyna</p>
+        <p className="landing-tagline">{import.meta.env.MODE === 'sites' ? 'Oda kodunu paylaş, doğrudan bağlantıyı dene' : 'Aynı ağdaki arkadaşlarınla oyna'}</p>
       </div>
     </section>
   );

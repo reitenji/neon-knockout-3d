@@ -1,9 +1,9 @@
 import * as THREE from 'three';
-import type { Chassis } from '../../../shared/model.js';
+import { CHASSIS, type Chassis } from '../../../shared/model.js';
+import { FIGHTERS } from '../../../shared/fighters.js';
 
-export const FIGHTER_COLORS: Readonly<Record<Chassis, number>> = {
-  RIFT: 0x58dced, BASTION: 0xf6b65d, PULSE: 0xff668d, WRAITH: 0xb79aff
-};
+export const FIGHTER_COLORS = Object.fromEntries(CHASSIS.map(chassis =>
+  [chassis, new THREE.Color(FIGHTERS[chassis].color).getHex()])) as Readonly<Record<Chassis, number>>;
 
 export interface FighterModel {
   root: THREE.Group;
@@ -15,6 +15,10 @@ export interface FighterModel {
   rightElbow: THREE.Group;
   leftLeg: THREE.Group;
   rightLeg: THREE.Group;
+  leftKnee: THREE.Group;
+  rightKnee: THREE.Group;
+  leftFoot: THREE.Group;
+  rightFoot: THREE.Group;
   ornaments: THREE.Group;
   glow: THREE.MeshStandardMaterial;
   armor: THREE.MeshStandardMaterial;
@@ -41,7 +45,7 @@ export function createFighterModel(chassis: Chassis): FighterModel {
   root.name = `fighter-${chassis}`;
   const body = new THREE.Group();
   root.add(body);
-  const armor = new THREE.MeshStandardMaterial({ color: chassis === 'PULSE' ? 0xe0e4e1 : FIGHTER_COLORS[chassis], roughness: 0.42, metalness: 0.55 });
+  const armor = new THREE.MeshStandardMaterial({ color: FIGHTER_COLORS[chassis], roughness: 0.42, metalness: 0.55 });
   const dark = new THREE.MeshStandardMaterial({ color: 0x152332, roughness: 0.56, metalness: 0.7 });
   const pale = new THREE.MeshStandardMaterial({ color: 0xe4edf2, roughness: 0.35, metalness: 0.5 });
   const glow = new THREE.MeshStandardMaterial({ color: FIGHTER_COLORS[chassis], emissive: FIGHTER_COLORS[chassis], emissiveIntensity: 1.6, roughness: 0.25 });
@@ -59,8 +63,8 @@ export function createFighterModel(chassis: Chassis): FighterModel {
   const pivot = (parent: THREE.Object3D, x: number, y: number, z = 0): THREE.Group => {
     const group = new THREE.Group(); group.position.set(x, y, z); parent.add(group); return group;
   };
-  const bulky = chassis === 'BASTION';
-  const floating = chassis === 'PULSE' || chassis === 'WRAITH';
+  const bulky = chassis === 'BASTION' || chassis === 'TITAN';
+  const floating = chassis === 'PULSE' || chassis === 'WRAITH' || chassis === 'NOVA';
   const shoulder = bulky ? 24 : chassis === 'PULSE' ? 23 : 16;
   const torsoHeight = bulky ? 43 : floating ? 48 : 44;
   const head = pivot(body, 0, bulky ? 64 : 68);
@@ -70,6 +74,10 @@ export function createFighterModel(chassis: Chassis): FighterModel {
   const rightElbow = pivot(rightArm, 0, -15);
   const leftLeg = pivot(body, bulky ? 12 : 9, 25);
   const rightLeg = pivot(body, bulky ? -12 : -9, 25);
+  const leftKnee = pivot(leftLeg, 0, -13);
+  const rightKnee = pivot(rightLeg, 0, -13);
+  const leftFoot = pivot(leftKnee, 0, -10);
+  const rightFoot = pivot(rightKnee, 0, -10);
   const ornaments = pivot(body, 0, torsoHeight);
 
   for (const [arm, elbow] of [[leftArm, leftElbow], [rightArm, rightElbow]]) {
@@ -82,13 +90,13 @@ export function createFighterModel(chassis: Chassis): FighterModel {
   }
 
   if (!floating) {
-    for (const leg of [leftLeg, rightLeg]) {
-      sphere(leg, bulky ? 7 : 5, joint);
-      box(leg, bulky ? 15 : 9, 12, bulky ? 16 : 10, armor, 0, -6);
-      sphere(leg, 4, joint, 0, -13);
-      box(leg, bulky ? 16 : 9, 10, bulky ? 16 : 11, dark, 0, -18);
-      box(leg, bulky ? 19 : 12, 7, bulky ? 27 : 20, armor, 0, -23, 4);
-      box(leg, bulky ? 12 : 6, 2, 2, glow, 0, -22, bulky ? 18 : 15);
+    for (const [leg, knee, foot] of [[leftLeg, leftKnee, leftFoot], [rightLeg, rightKnee, rightFoot]]) {
+      sphere(leg!, bulky ? 7 : 5, joint);
+      box(leg!, bulky ? 15 : 9, 12, bulky ? 16 : 10, armor, 0, -6);
+      sphere(knee!, 4, joint);
+      box(knee!, bulky ? 16 : 9, 9, bulky ? 16 : 11, dark, 0, -5);
+      box(foot!, bulky ? 19 : 12, 7, bulky ? 27 : 20, armor, 0, 0, 4);
+      box(foot!, bulky ? 12 : 6, 2, 2, glow, 0, 1, bulky ? 18 : 15);
     }
   }
 
@@ -138,7 +146,7 @@ export function createFighterModel(chassis: Chassis): FighterModel {
       add(elbow, new THREE.CylinderGeometry(7, 8, 15, 12), pale, 0, -8, 8).rotation.x = Math.PI / 2;
       sphere(elbow, 5, glow, 0, -8, 17);
     }
-  } else {
+  } else if (chassis === 'WRAITH') {
     add(body, new THREE.CylinderGeometry(12, 6, 26, 5), dark, 0, 44);
     add(body, new THREE.ConeGeometry(21, 39, 5), armor, 0, 28).rotation.z = Math.PI;
     box(body, 5, 22, 4, glow, 0, 43, 10);
@@ -156,6 +164,65 @@ export function createFighterModel(chassis: Chassis): FighterModel {
       }
     }
   }
+  if (chassis === 'EMBER') {
+    // Furnace chest, two chimney stacks and piston fists.
+    add(body, new THREE.CylinderGeometry(18, 15, 31, 8), armor, 0, 43);
+    box(body, 23, 20, 7, dark, 0, 45, 15);
+    for (let i = -1; i <= 1; i++) box(body, 4, 15, 3, glow, i * 7, 45, 20);
+    sphere(head, 11, armor, 0, 1);
+    box(head, 16, 5, 4, dark, 0, 2, 9);
+    box(head, 10, 2, 3, glow, 0, 2, 12);
+    for (const sign of [-1, 1]) {
+      add(body, new THREE.CylinderGeometry(5, 7, 35, 8), dark, sign * 15, 66, -14);
+      add(body, new THREE.CylinderGeometry(6, 6, 4, 8), glow, sign * 15, 85, -14);
+      const elbow = sign === 1 ? leftElbow : rightElbow;
+      add(elbow, new THREE.CylinderGeometry(11, 9, 22, 8), armor, 0, -8, 6).rotation.x = Math.PI / 2;
+      sphere(elbow, 7, glow, 0, -8, 18);
+    }
+  } else if (chassis === 'VOLT') {
+    // Lean runner with a lightning crest and swept ankle fins.
+    add(body, new THREE.CylinderGeometry(10, 7, 27, 3), armor, 0, 44);
+    box(body, 5, 19, 4, glow, 0, 44, 10).rotation.z = -0.25;
+    add(head, new THREE.OctahedronGeometry(12), armor, 0, 2).scale.set(0.7, 1, 1.1);
+    box(head, 17, 3, 4, glow, 0, 2, 9);
+    const crest = add(head, new THREE.ConeGeometry(7, 25, 3), pale, 0, 22, -3);
+    crest.rotation.z = -0.25;
+    for (const sign of [-1, 1]) {
+      box(body, 4, 29, 8, dark, sign * 14, 47, -11).rotation.z = sign * -0.55;
+      const foot = sign === 1 ? leftFoot : rightFoot;
+      add(foot, new THREE.ConeGeometry(5, 24, 3), armor, sign * 6, 9, -9).rotation.x = -0.7;
+      box(sign === 1 ? leftElbow : rightElbow, 3, 4, 27, glow, 0, -7, 10);
+    }
+  } else if (chassis === 'TITAN') {
+    // Tall riveted tank with massive hexagonal shoulder shields.
+    box(body, 43, 42, 31, armor, 0, 48);
+    box(body, 30, 27, 5, dark, 0, 50, 18);
+    box(body, 5, 22, 3, glow, 0, 50, 22);
+    box(body, 22, 5, 3, glow, 0, 50, 22);
+    box(head, 23, 20, 22, armor, 0, 17);
+    box(head, 15, 4, 3, glow, 0, 19, 13);
+    for (const sign of [-1, 1]) {
+      add(body, new THREE.CylinderGeometry(17, 17, 19, 6), dark, sign * 31, 65).rotation.z = Math.PI / 2;
+      const elbow = sign === 1 ? leftElbow : rightElbow;
+      box(elbow, 26, 27, 30, armor, sign * 3, -10, 5);
+      for (const z of [-3, 7, 17]) sphere(elbow, 2, pale, sign * 17, -4, z);
+    }
+  } else if (chassis === 'NOVA') {
+    // Satellite body suspended between four solar vanes and twin orbit rings.
+    add(body, new THREE.OctahedronGeometry(20), armor, 0, 49).scale.set(0.8, 1.15, 0.8);
+    sphere(body, 8, glow, 0, 48, 16);
+    sphere(head, 10, dark, 0, 10);
+    sphere(head, 5, glow, 0, 10, 9);
+    for (const sign of [-1, 1]) {
+      const ring = add(ornaments, new THREE.TorusGeometry(34, 1.8, 6, 40), glow, 0, 3);
+      ring.rotation.x = sign * 0.8;
+      for (const y of [-13, 13]) {
+        box(ornaments, 16, 20, 4, armor, sign * 31, y, -5).rotation.z = sign * -0.22;
+        box(ornaments, 11, 14, 2, dark, sign * 31, y, -2).rotation.z = sign * -0.22;
+      }
+    }
+    add(body, new THREE.ConeGeometry(8, 22, 8), glow, 0, 16).rotation.z = Math.PI;
+  }
   root.updateMatrixWorld(true);
-  return { root, body, head, leftArm, rightArm, leftElbow, rightElbow, leftLeg, rightLeg, ornaments, glow, armor, materials: [armor, dark, pale, glow, joint], dispose: () => disposeObject(root) };
+  return { root, body, head, leftArm, rightArm, leftElbow, rightElbow, leftLeg, rightLeg, leftKnee, rightKnee, leftFoot, rightFoot, ornaments, glow, armor, materials: [armor, dark, pale, glow, joint], dispose: () => disposeObject(root) };
 }

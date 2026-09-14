@@ -1,6 +1,6 @@
 # Neon Knockout 3D
 
-A standalone Three.js **2.5D LAN arena brawler**, derived from [Neon Knockout](https://github.com/reitenji/neon-knockout). The game uses an orthographic 3D camera and four original articulated robot models while combat remains on a flat, server-authoritative plane. Menus and controls are in Turkish. All art and audio ship locally; no Internet service is required during play.
+A standalone Three.js **2.5D LAN arena brawler**, derived from [Neon Knockout](https://github.com/reitenji/neon-knockout). The game uses an orthographic 3D camera and eight original articulated robot models while combat remains on a flat, server-authoritative plane. Menus and controls are in Turkish. All art and audio ship locally; no Internet service is required during play.
 
 ![Four playable fighters](artifacts/qa/lobby-desktop.png)
 
@@ -12,6 +12,12 @@ A standalone Three.js **2.5D LAN arena brawler**, derived from [Neon Knockout](h
 | BASTION | Broad armored brawler; planted steps and heavy gauntlets | Zırhlı İlerleyiş: armored advance, 1.7 s cooldown | Slower movement; 35% less normal knockback, 70% less during the advance |
 | PULSE | Floating reactor; orbital machinery and emitter arms | Radyal Darbe: 125-unit radial repulsion at dash start, 1.8 s cooldown | Shorter invulnerability window; burst obeys protection and hit-credit rules |
 | WRAITH | Hooded spectral machine; gliding motion and claws | Faz Geçişi: 190 ms phase protection, 1.55 s cooldown | Receives 12% more knockback when hit |
+| EMBER | Furnace robot with piston fists | Fırın Patlaması: 90-unit strong burst, 1.9 s cooldown | No invulnerability; short offensive dash |
+| VOLT | Lean sprinter with lightning crest | Şimşek Adımı: brief fast dash, 0.95 s cooldown | Fastest movement; receives 18% extra knockback |
+| TITAN | Riveted heavy tank and shield shoulders | Çelik Duruş: slow armored brace, 2 s cooldown | 45% less normal knockback; 78% less during brace |
+| NOVA | Floating satellite and solar vanes | Yıldız Dalgası: 180-unit weaker burst, 2.1 s cooldown | Wide spacing control; receives 5% extra knockback |
+
+Each fighter uses its player's unique room color on armor, core, name and ground marker, including when players choose the same chassis. Damage caps at **250%**, with brighter armor and a slow pulse as damage rises (static with reduced motion). Knockback increases steeply above 100%; any successful damaging hit that reaches 250% breaks an active armored dash and launches the target toward the edge. Invulnerability and spawn protection still prevent damage. Ringouts start immediately at the visible polygon edge, including while it contracts.
 
 Keyboard and touch use the same authoritative rules. Every accepted activation has a cooldown; holding Space does not repeat the ability. Incoming attacks can be dodged during the character's invulnerability window; BASTION instead resists knockback.
 
@@ -98,7 +104,7 @@ npm run lint
 npm run typecheck
 npm test
 npm run test:load
-npm run build
+npm run build:lan
 npm run test:e2e
 npm run test:e2e:webkit
 npm run verify
@@ -115,3 +121,19 @@ The Three.js renderer lives in `src/client/game/three/`. Fighter geometry uses a
 The initial release validates same-host independent browser clients, WebRTC/Socket.IO paths, touch controls and an eight-player scene. This is not a claim of testing a separate physical phone or laptop. Use the host's printed LAN address on a second device for physical Wi-Fi acceptance.
 
 The new game defaults to TCP **4175** and WebRTC UDP **53140–53171**, separate from the original game's default ports. `PORT`, `GAME_WEBRTC_UDP_PORT_MIN`, and `GAME_WEBRTC_UDP_PORT_MAX` can override these when needed. See `docs/acceptance-3d.md` for the recorded checks.
+
+
+## Sites: browser-hosted play and STUN-only internet trial
+
+`npm run build` (or `npm run build:sites`) produces the Sites Worker and browser assets. `npm run build:lan` produces the separate Node server; use `npm run lan` to build and start that mode. Do not use `npm start` after a Sites build. Sites connection-mailbox migrations live in `drizzle/`, with the logical D1 binding in `.openai/hosting.json`.
+
+On Sites, the room creator's browser runs the shared physics and bots. Other players join through a direct WebRTC data channel. The STUN-only trial uses `stun:stun.cloudflare.com:3478` to discover direct routes across different networks, while still allowing Wi-Fi/LAN play. There is no TURN relay or externally hosted game server; restrictive NATs, CGNAT and firewalls can prevent a remote connection. Sites supplies the page and a temporary connection mailbox. Internet access is needed to load the site and establish rooms. An isolated guest network can prevent peers from connecting even when they use the same Wi-Fi name. Keep the host tab open and active; closing or reloading it ends the room. A disconnected fighter can refresh and resume while the host is present and the existing reconnect grace permits it. Spectators rejoin by room code.
+
+The lobby supports up to eight fighters in total (humans plus bots), plus eight human spectators. The host can choose Spectator and watch eight bots. Bot chassis and Easy/Normal/Hard difficulty can be changed in the lobby; bots use the same simulation inputs and cooldown rules, with no AI API. Results and rematches preserve these roles.
+
+For a local Sites-build smoke, run `npm run build:sites` followed by `npm run preview:sites` and open the printed loopback URL in two independent browser contexts. This preview uses Node's built-in SQLite and needs Node 22.13+ (verified on Node 25); production runs the Worker against Sites D1. A same-host test is not physical second-device acceptance.
+
+During the current public beta, Sites usage is included within plan-specific limits; reaching a limit can restrict publication or storage. This project provisions no paid external host, relay, custom domain or AI API. See [OpenAI's Sites beta limits](https://help.openai.com/en/articles/20001339). This is not a guarantee of unlimited or permanently free hosting.
+
+
+The STUN-only trial uses Cloudflare's [free STUN service](https://developers.cloudflare.com/realtime/turn/faq/) with no account credentials or relay endpoint. If gathering stalls after eight seconds, the client retains any usable direct candidates already collected so a blocked STUN endpoint does not break LAN play. Internet connectivity remains experimental; the host must keep its tab open, and some network pairs will fail without TURN. To try it, refresh both clients, let one device create a room on Wi-Fi and another join on mobile data, then enter the same room code. This requires a real two-network test; a same-machine browser connection does not prove WAN reachability.

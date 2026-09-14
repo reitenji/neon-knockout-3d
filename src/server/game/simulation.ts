@@ -2,7 +2,7 @@ import { GAME } from '../../shared/constants.js';
 import { profileForAttack } from '../../shared/combat/profiles.js';
 import { normalizeAim, normalizeAxes } from '../../shared/kinematics.js';
 import { matchTimingFor } from '../../shared/roomSettings.js';
-import type { GameEvent, InputFrame, MatchPhase, MatchPlayer, MatchSnapshot, PlayerNetworkStatus } from '../../shared/model.js';
+import type { GameEvent, InputFrame, MatchPhase, MatchPlayer, MatchSnapshot, PlayerNetworkStatus, Vec2 } from '../../shared/model.js';
 import { advanceCombatTimers, startActions } from './combat.js';
 import {
   buildActiveAttackShapes,
@@ -11,7 +11,7 @@ import {
   resolveSurvivingContacts,
   type ActiveAttackSlice
 } from './combatResolution.js';
-import { clamp, isKnockedOut } from './geometry.js';
+import { clamp, isKnockedOut, platformExitPoint } from './geometry.js';
 import { advancePlayers, chooseSafestSpawn, platformAt, separateActivePlayers } from './movement.js';
 import { advancePulses, clearPulses, spawnNeonPulse } from './projectiles.js';
 import { createEmptyInput, type MatchState, type MutableMatchPlayer } from './state.js';
@@ -175,7 +175,7 @@ function knockoutTransition(
   }];
 }
 
-function resolveBoundaries(state: MatchState): readonly GameEvent[] {
+function resolveBoundaries(state: MatchState, previousPositions: Readonly<Record<string, Vec2>>): readonly GameEvent[] {
   const events: GameEvent[] = [];
   const platform = platformAt(state.contraction);
   const knockedOutPlayerIds = new Set<string>();
@@ -183,6 +183,7 @@ function resolveBoundaries(state: MatchState): readonly GameEvent[] {
     const player = state.players[playerId];
     if (player.connected && player.respawnRemainingMs <= 0 &&
       isKnockedOut(player.position, platform, GAME.knockoutDistance)) {
+      player.position = platformExitPoint(previousPositions[playerId], player.position, platform.vertices);
       const knockoutEvents = knockoutTransition(state, playerId, undefined, knockedOutPlayerIds);
       if (knockoutEvents.length === 0) continue;
       events.push(...knockoutEvents);
@@ -270,6 +271,7 @@ export function stepMatch(
   advanceMatchClocks(state, stepMs, events);
   updateContraction(state);
   if (!activeAtStart) return events;
+  const previousPositions = Object.fromEntries(Object.values(state.players).map((player) => [player.playerId, { ...player.position }]));
   startActions(state, stepMs);
   const pulseBurstActivations = advancePlayers(state, stepMs);
   separateActivePlayers(state);
@@ -279,7 +281,7 @@ export function stepMatch(
   const shapes = buildActiveAttackShapes(state, combatStep.activeSlices);
   events.push(...resolveClashesAndPulseBreaks(state, shapes));
   events.push(...resolveSurvivingContacts(state, shapes, combatHistory));
-  const knockoutEvents = resolveBoundaries(state);
+  const knockoutEvents = resolveBoundaries(state, previousPositions);
   events.push(...knockoutEvents);
   advanceRespawns(state, stepMs, events, knockoutEvents);
   events.push(...evaluateResult(state));

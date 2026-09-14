@@ -44,6 +44,7 @@ function startDash(state: MatchState, player: MutableMatchPlayer): PulseBurstAct
   if (
     !player.latestInput.dash ||
     player.previousDash ||
+    player.hitstunRemainingMs > 0 ||
     player.dashRemainingMs > 0 ||
     player.dashCooldownRemainingMs > 0
   ) {
@@ -56,7 +57,7 @@ function startDash(state: MatchState, player: MutableMatchPlayer): PulseBurstAct
   player.dashInvulnerabilityRemainingMs = fighter.dashInvulnerabilityMs;
   player.dashCooldownRemainingMs = fighter.dashCooldownMs;
   player.perfectDodgeConsumed = false;
-  if (player.chassis !== 'PULSE') return null;
+  if (fighter.burstRadius === undefined) return null;
   player.protectionRemainingMs = 0;
   return { playerId: player.playerId, activationId: state.nextAttackId++ };
 }

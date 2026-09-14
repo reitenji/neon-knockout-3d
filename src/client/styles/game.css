@@ -880,21 +880,46 @@
 .fighter-label.is-local::before { content: ''; width: 5px; height: 5px; background: var(--fighter-accent); border-radius: 50%; }
 .render-error { position: absolute; z-index: 9; inset: 35% 15% auto; padding: 20px; color: #ffe4d6; background: #25171c; border: 1px solid #de856d; text-align: center; }
 .fighter-showcase { min-width: 0; grid-column: 1 / -1; }
-.fighter-showcase__canvas { height: clamp(150px, 22vh, 210px); width: 100%; overflow: hidden; }
+.fighter-showcase__canvas { height: clamp(240px, 30vh, 290px); width: 100%; overflow: hidden; }
 .fighter-showcase__canvas canvas { display: block; }
 .fighter-showcase__ability { display: flex; align-items: baseline; justify-content: center; flex-wrap: wrap; gap: 6px 14px; margin: 0; padding: 8px 4px 12px; text-align: center; font-size: 12px; line-height: 1.5; color: #c0d3df; }
 .fighter-showcase__ability strong { font-size: 13px; }
 .fighter-showcase__ability kbd { padding: 2px 5px; margin-left: 5px; border: 1px solid #506879; border-radius: 3px; font-size: 10px; }
 .title-3d { color: #8bdae6; font-size: 0.45em; vertical-align: top; }
 .match-hud__ability > span { max-width: 155px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-@media (max-width: 700px) { .fighter-showcase__canvas { height: 145px; } .fighter-label { font-size: 9px; gap: 3px; } .fighter-label span { max-width: 64px; } }
-@media (max-height: 600px) and (orientation: landscape) { .fighter-showcase__canvas { height: 135px; } }
+@media (max-width: 700px) { .fighter-showcase__canvas { height: 260px; } .fighter-label { font-size: 9px; gap: 3px; } .fighter-label span { max-width: 64px; } }
+@media (max-height: 600px) and (orientation: landscape) { .fighter-showcase__canvas { height: 220px; } }
 
 .screen--lobby { overflow-y: auto; }
 .lobby-frame { height: auto; min-height: 100%; grid-template-rows: auto auto auto auto minmax(125px, 1fr) 24px auto; overflow: visible; }
 
 @media (min-width: 900px) and (min-height: 620px) {
   .lobby-frame { padding: 12px 24px; gap: 8px; grid-template-rows: auto auto auto auto minmax(76px, 1fr) auto auto; }
-  .fighter-showcase__canvas { height: 145px; }
+  .fighter-showcase__canvas { height: 260px; }
   .fighter-showcase__ability { padding-bottom: 4px; }
 }
+
+/* Lobby membership grows with bots and spectators; keep every action reachable. */
+.lobby-frame { height: max-content; align-self: start; grid-template-rows: none; grid-auto-rows: max-content; align-content: start; }
+.lobby-role { width: min(260px, 100%); }
+.bot-manager__add, .bot-manager__edit { display: grid; grid-template-columns: minmax(100px, 1fr) minmax(100px, 1fr) auto; gap: 10px; align-items: end; }
+.bot-manager__add button, .bot-manager__edit button { min-height: 42px; }
+.lobby-roster { min-width: 0; }
+.lobby-roster__count { color: var(--color-text-muted); font-size: 12px; }
+.lobby-roster__identity { list-style: none; margin: 0; padding: 0; }
+.lobby-roster__entry { min-width: 0; }
+.bot-manager__edit { padding: 8px 12px 12px; border: 1px solid rgb(33 49 63 / 0.78); border-top: 0; }
+.lobby-roster > .player-list { overflow: visible; }
+.lobby-roster > .player-list + .player-list { margin-top: 12px; }
+.lobby-feedback:empty { display: none; }
+.match-hud__spectator { color: #bcd9e8; padding: 8px 14px; border: 1px solid #3a5868; background: #101f2b; }
+@media (max-width: 600px) {
+  .bot-manager__add, .bot-manager__edit { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .bot-manager__add button, .bot-manager__edit button { grid-column: 1 / -1; }
+}
+
+.browser-host-share { display: grid; gap: 6px; width: 100%; max-width: 430px; min-width: 0; font-size: 12px; line-height: 1.5; }
+.room-share-link { width: 100%; min-width: 0; padding: 8px; border: 1px solid currentColor; border-radius: 4px; background: transparent; color: var(--color-cyan); font: inherit; }
+.browser-host-share [role="status"] { min-height: 18px; }
+.browser-host-share span { color: var(--color-text-muted); }
+.landing-role { margin-block: 8px; }

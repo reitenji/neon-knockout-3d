@@ -20,7 +20,7 @@ import {
   type RtcNegotiationRequest,
   type TransportModeNotice
 } from '../../shared/gameplayTransport.js';
-import type { Ack, InputFrame } from '../../shared/model.js';
+import { CHASSIS, type Ack, type InputFrame } from '../../shared/model.js';
 import type { createMatchPublicationSequencer } from './MatchPublicationSequencer.js';
 
 type MatchPublicationSequencer = ReturnType<typeof createMatchPublicationSequencer>;
@@ -116,7 +116,7 @@ const matchActionSchema = z.object({
 const matchPlayerSchema = z.object({
   playerId: z.string(),
   name: z.string(),
-  chassis: z.enum(['RIFT', 'BASTION', 'PULSE', 'WRAITH']),
+  chassis: z.enum(CHASSIS),
   accent: z.union([
     z.literal(0), z.literal(1), z.literal(2), z.literal(3),
     z.literal(4), z.literal(5), z.literal(6), z.literal(7)

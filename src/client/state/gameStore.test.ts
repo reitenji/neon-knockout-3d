@@ -27,6 +27,10 @@ class FakeGameClient implements GameClient {
   readonly createRoom = vi.fn<(name: string) => Promise<Ack<SessionWelcome>>>();
   readonly joinRoom = vi.fn<(name: string, roomCode: string) => Promise<Ack<SessionWelcome>>>();
   readonly resumeSession = vi.fn<(roomCode: string, resumeToken: string) => Promise<Ack<SessionWelcome>>>();
+  readonly setRole = vi.fn<GameClient['setRole']>(async () => ({ ok: true, data: null }));
+  readonly addBot = vi.fn<GameClient['addBot']>(async () => ({ ok: true, data: null }));
+  readonly updateBot = vi.fn<GameClient['updateBot']>(async () => ({ ok: true, data: null }));
+  readonly removeBot = vi.fn<GameClient['removeBot']>(async () => ({ ok: true, data: null }));
   readonly setChassis = vi.fn<(chassis: Chassis) => Promise<Ack<null>>>(async () => ({ ok: true, data: null }));
   readonly setReady = vi.fn<(ready: boolean) => Promise<Ack<null>>>(async () => ({ ok: true, data: null }));
   readonly setRoomSettings = vi.fn<(settings: RoomSettings) => Promise<Ack<null>>>(async () => ({ ok: true, data: null }));
@@ -61,6 +65,7 @@ function successWelcome(overrides: Partial<SessionWelcome> = {}): SessionWelcome
 }
 function player(overrides: Partial<RoomPlayer> = {}): RoomPlayer {
   return {
+    role: 'FIGHTER', botDifficulty: null,
     playerId: 'player-1', name: 'Ada', chassis: 'RIFT', accent: 0, ready: false, connected: true,
     reconnectRemainingMs: null, stats: stats(), ...overrides
   };

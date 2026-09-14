@@ -6,7 +6,7 @@ import {
   inviteRoomCodeFromPath,
   resumeRoomPreferenceFromLocation
 } from './inviteRoute.js';
-import { createArenaBridge, type GameStore } from './state/gameStore.js';
+import { createArenaBridge, selectSelfPlayer, type GameStore } from './state/gameStore.js';
 import { useGameStore } from './state/useGameStore.js';
 import { LandingScreen } from './ui/LandingScreen.js';
 import { LobbyScreen } from './ui/LobbyScreen.js';
@@ -40,6 +40,7 @@ function usePortraitViewport(): boolean {
 
 export function App({ store, gameFactory }: AppProps) {
   const state = useGameStore(store);
+  const spectator = selectSelfPlayer(state)?.role === 'SPECTATOR';
   const portraitViewport = usePortraitViewport();
   const arenaBridge = useMemo(() => createArenaBridge(store), [store]);
   const [inviteRoomCode, setInviteRoomCode] = useState(() => inviteRoomCodeFromPath(window.location.pathname));
@@ -75,7 +76,7 @@ export function App({ store, gameFactory }: AppProps) {
   };
 
   return (
-    <div className={`app-shell${state.screen === 'MATCH' ? ' app-shell--match' : ''}`}>
+    <div className={`app-shell${state.screen === 'MATCH' ? ' app-shell--match' : ''}${spectator ? ' app-shell--spectator' : ''}`}>
       <TopBar state={state} onToggleSound={store.actions.toggleSound} onLeaveRoom={leaveRoom} />
 
       <main className="app-main">
@@ -92,6 +93,10 @@ export function App({ store, gameFactory }: AppProps) {
         {state.screen === 'LOBBY' ? (
           <LobbyScreen
             state={state}
+            onSetRole={store.actions.setRole}
+            onAddBot={store.actions.addBot}
+            onUpdateBot={store.actions.updateBot}
+            onRemoveBot={store.actions.removeBot}
             onSetChassis={store.actions.setChassis}
             onToggleReady={store.actions.setReady}
             onSetRoomSettings={store.actions.setRoomSettings}
@@ -105,6 +110,8 @@ export function App({ store, gameFactory }: AppProps) {
             <ThreeArena
               bridge={arenaBridge}
               localPlayerId={state.session?.playerId ?? ''}
+              spectator={spectator}
+              botPlayerIds={state.room?.players.filter((player) => player.botDifficulty !== null).map((player) => player.playerId)}
               createGame={gameFactory}
             />
             {portraitViewport ? (
