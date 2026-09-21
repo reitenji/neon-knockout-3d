@@ -4,10 +4,10 @@ import { sqliteSignalStore } from '../../scripts/lib/sqlite-signal-store.js';
 import { signalFetch } from './signaling.js';
 const stores:Array<ReturnType<typeof sqliteSignalStore>>=[];
 afterEach(()=>{for(const store of stores)store.close();stores.length=0;vi.useRealTimers();});
-function setup(){
+function setup(source='192.0.2.1'){
   const store=sqliteSignalStore();stores.push(store);
-  return async(path:string,method='GET',token?:string,data?:unknown)=>{
-    const res=await signalFetch(new Request(`https://example.test/api/peer-rooms${path}`,{method,headers:{'Content-Type':'application/json',...(token?{Authorization:`Bearer ${token}`}:{})},body:data?JSON.stringify(data):undefined}),{DB:store.db});
+  return async(path:string,method='GET',token?:string,data?:unknown,requestSource=source)=>{
+    const res=await signalFetch(new Request(`https://example.test/api/peer-rooms${path}`,{method,headers:{'Content-Type':'application/json','CF-Connecting-IP':requestSource,...(token?{Authorization:`Bearer ${token}`}:{})},body:data?JSON.stringify(data):undefined}),{DB:store.db});
     return {status:res.status,data:await res.json() as Record<string,unknown>};
   };
 }
@@ -33,6 +33,13 @@ describe('Sites connection mailbox',()=>{
     expect((await api('/ABCD/offers','POST',undefined,{guestToken:guest,offer:'v=0'+'x'.repeat(33000)})).status).toBe(400);
     for(let i=0;i<16;i++)expect((await api('/ABCD/offers','POST',undefined,{guestToken:guest,offer:sdp})).status).toBe(201);
     expect((await api('/ABCD/offers','POST',undefined,{guestToken:guest,offer:sdp})).status).toBe(429);
+  });
+  it('limits active room reservations per source without consuming global capacity',async()=>{
+    const api=setup();
+    const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    for(let i=0;i<8;i++)expect((await api('','POST',undefined,{roomCode:`ABC${alphabet[i]}`,ownerToken:owner})).status).toBe(201);
+    expect((await api('','POST',undefined,{roomCode:'ABCJ',ownerToken:owner})).status).toBe(409);
+    expect((await api('','POST',undefined,{roomCode:'ABCJ',ownerToken:owner},'198.51.100.2')).status).toBe(201);
   });
   it('expires offers and rooms and permits reusing a code after host expiry',async()=>{
     vi.useFakeTimers();const api=setup();await api('','POST',undefined,{roomCode:'ABCD',ownerToken:owner});
