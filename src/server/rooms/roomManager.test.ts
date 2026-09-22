@@ -134,6 +134,53 @@ const idleInput = (seq: number): InputFrame => ({
 });
 
 describe('RoomManager FFA lifecycle', () => {
+  it('bounds aggregate room creation, connections, creation rate, idle lifetime, and code retries', () => {
+    const clock = new FakeClock();
+    const publications: RoomPublication[] = [];
+    const bytes = new DeterministicBytes();
+    const manager = new RoomManager({
+      now: clock.now,
+      randomBytes: bytes.next,
+      publish: (event) => publications.push(event),
+      resourceLimits: {
+        maxRooms: 2,
+        maxConnections: 2,
+        roomCreationsPerWindow: 1,
+        roomCreationWindowMs: 100,
+        roomIdleTimeoutMs: 1_000,
+        roomCodeAttempts: 2
+      }
+    });
+
+    const first = manager.createRoom('first', 'Ada');
+    expectErrorCode(() => manager.createRoom('rate-limited', 'Linus'), 'RATE_LIMITED');
+    clock.advance(101);
+    const second = manager.createRoom('second', 'Linus');
+    expectErrorCode(() => manager.joinRoom('third', first.roomCode, 'Grace'), 'SERVER_CAPACITY');
+    manager.disconnect('second');
+    expectErrorCode(() => manager.createRoom('room-capacity', 'Grace'), 'SERVER_CAPACITY');
+
+    clock.advance(900);
+    manager.advance(0);
+    expect(publications).toContainEqual({ type: 'ROOM_CLOSED', roomCode: first.roomCode });
+    expectErrorCode(() => manager.setReady('first', true), 'PLAYER_NOT_FOUND');
+
+    const collisionBytes = new DeterministicBytes();
+    const collisionManager = new RoomManager({
+      now: clock.now,
+      randomBytes: collisionBytes.next,
+      publish: () => undefined,
+      resourceLimits: { roomCodeAttempts: 2 }
+    });
+    collisionBytes.queue(4, [2, 2, 2, 2]);
+    const occupied = collisionManager.createRoom('occupied', 'Grace');
+    collisionManager.disconnect('occupied');
+    collisionBytes.queue(4, [2, 2, 2, 2], [2, 2, 2, 2]);
+    expectErrorCode(() => collisionManager.createRoom('collision', 'Alan'), 'SERVER_CAPACITY');
+    expect(occupied.roomCode).toBe('CCCC');
+    expect(second.roomCode).not.toBe(first.roomCode);
+  });
+
   it('owns a twelve-tick combat history per match and clears it across result, lobby, and epoch replacement', () => {
     const subject = fixture();
     const { roomCode, players } = readyAndStart(subject);

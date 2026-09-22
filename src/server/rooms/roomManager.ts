@@ -48,6 +48,23 @@ const MAX_ELAPSED_MS = 250;
 const MAX_STEPS_PER_ADVANCE = 5;
 const TIMER_EPSILON_MS = 1e-7;
 const MAX_TEST_COMBAT_STEPS = 240;
+const DEFAULT_RESOURCE_LIMITS = {
+  maxRooms: 256,
+  maxConnections: 4_096,
+  roomCreationsPerWindow: 32,
+  roomCreationWindowMs: 10_000,
+  roomIdleTimeoutMs: 30 * 60_000,
+  roomCodeAttempts: 32
+} as const;
+
+export type RoomManagerResourceLimits = Readonly<{
+  maxRooms: number;
+  maxConnections: number;
+  roomCreationsPerWindow: number;
+  roomCreationWindowMs: number;
+  roomIdleTimeoutMs: number;
+  roomCodeAttempts: number;
+}>;
 
 export type RoomPublication =
   | { type: 'ROOM_STATE'; roomCode: string; state: RoomState }
@@ -100,6 +117,7 @@ type Room = {
   bots: Map<string, BotController>;
   accumulatorMs: number;
   snapshotAccumulatorMs: number;
+  lastActivityAt: number;
 };
 
 type PlayerNetworkRuntime = {
@@ -118,6 +136,7 @@ type RoomManagerDependencies = Readonly<{
   randomBytes: (size: number) => Uint8Array;
   publish: (event: RoomPublication) => void;
   bindTestHarness?: (harness: RoomManagerTestHarness) => void;
+  resourceLimits?: Partial<RoomManagerResourceLimits>;
 }>;
 
 export type TestCombatPlayerStage = Readonly<{
@@ -206,8 +225,11 @@ function networkStatus(runtime: PlayerNetworkRuntime, now: number): PlayerNetwor
 export class RoomManager {
   private readonly rooms = new Map<string, Room>();
   private readonly connections = new Map<string, ConnectionSession>();
+  private readonly roomCreationTimes: number[] = [];
+  private readonly resourceLimits: RoomManagerResourceLimits;
 
   constructor(private readonly deps: RoomManagerDependencies) {
+    this.resourceLimits = { ...DEFAULT_RESOURCE_LIMITS, ...deps.resourceLimits };
     deps.bindTestHarness?.({
       placePlayer: (roomCode, playerId, position, facing) =>
         this.placePlayerForTesting(roomCode, playerId, position, facing),
@@ -222,12 +244,14 @@ export class RoomManager {
     }
     this.rooms.clear();
     this.connections.clear();
+    this.roomCreationTimes.length = 0;
   }
 
   createRoom(connectionId: string, name: string): SessionWelcome {
     this.assertConnectionAvailable(connectionId);
-    const roomCode = this.createRoomCode();
     const normalizedName = this.normalizeName(name);
+    this.assertRoomCreationAvailable();
+    const roomCode = this.createRoomCode();
     const playerId = bytesToHex(this.deps.randomBytes(16));
     const resumeToken = this.deps.randomBytes(32);
     const player: RoomPlayer = {
@@ -260,10 +284,12 @@ export class RoomManager {
       inputs: new Map(),
       bots: new Map(),
       accumulatorMs: 0,
-      snapshotAccumulatorMs: 0
+      snapshotAccumulatorMs: 0,
+      lastActivityAt: this.deps.now()
     };
     this.rooms.set(roomCode, room);
     this.connections.set(connectionId, { roomCode, playerId });
+    this.roomCreationTimes.push(this.deps.now());
     this.publishRoom(room);
     return { playerId, roomCode, resumeToken: bytesToHex(resumeToken), resumed: false };
   }
@@ -271,6 +297,7 @@ export class RoomManager {
   joinRoom(connectionId: string, roomCode: string, name: string, role: PlayerRole = 'FIGHTER'): SessionWelcome {
     this.assertConnectionAvailable(connectionId);
     const room = this.requireRoom(roomCode);
+    room.lastActivityAt = this.deps.now();
     this.assertRole(role);
     if (role === 'FIGHTER' && (room.phase === 'COUNTDOWN' || room.phase === 'MATCH')) {
       throw new DomainError('MATCH_IN_PROGRESS', 'Maç devam ederken yeni oyuncu katılamaz.', true);
@@ -309,6 +336,7 @@ export class RoomManager {
   ): SessionWelcome {
     this.assertConnectionAvailable(connectionId);
     const room = this.requireRoom(roomCode);
+    room.lastActivityAt = this.deps.now();
     const token = this.parseResumeToken(resumeToken);
     const now = this.deps.now();
     const player = [...room.players.values()].find((candidate) =>
@@ -729,6 +757,10 @@ export class RoomManager {
   advance(elapsedMs: number): void {
     const now = this.deps.now();
     for (const room of [...this.rooms.values()]) {
+      if (now - room.lastActivityAt >= this.resourceLimits.roomIdleTimeoutMs) {
+        this.closeRoom(room);
+        continue;
+      }
       let membershipChanged = false;
       for (const player of [...room.players.values()]) {
         if (!player.connected && player.expiresAt !== null && player.expiresAt <= now) {
@@ -799,11 +831,35 @@ export class RoomManager {
   }
 
   private createRoomCode(): string {
-    for (;;) {
+    for (let attempt = 0; attempt < this.resourceLimits.roomCodeAttempts; attempt += 1) {
       const roomCode = [...this.deps.randomBytes(4)]
         .map((value) => ROOM_CODE_ALPHABET[value % ROOM_CODE_ALPHABET.length]).join('');
       if (!this.rooms.has(roomCode)) return roomCode;
     }
+    throw new DomainError('SERVER_CAPACITY', 'Sunucu şu anda yeni oda oluşturamıyor.', true);
+  }
+
+  private assertRoomCreationAvailable(): void {
+    if (this.rooms.size >= this.resourceLimits.maxRooms) {
+      throw new DomainError('SERVER_CAPACITY', 'Sunucu oda kapasitesine ulaştı.', true);
+    }
+    const cutoff = this.deps.now() - this.resourceLimits.roomCreationWindowMs;
+    while (this.roomCreationTimes[0] !== undefined && this.roomCreationTimes[0] <= cutoff) {
+      this.roomCreationTimes.shift();
+    }
+    if (this.roomCreationTimes.length >= this.resourceLimits.roomCreationsPerWindow) {
+      throw new DomainError('RATE_LIMITED', 'Çok hızlı oda oluşturuluyor.', true);
+    }
+  }
+
+  private closeRoom(room: Room): void {
+    if (room.match) clearPulses(room.match);
+    room.combatHistory?.clear();
+    this.rooms.delete(room.roomCode);
+    for (const [connectionId, session] of this.connections) {
+      if (session.roomCode === room.roomCode) this.connections.delete(connectionId);
+    }
+    this.deps.publish({ type: 'ROOM_CLOSED', roomCode: room.roomCode });
   }
 
   private lowestUnusedAccent(room: Room): PlayerAccent {
@@ -1087,6 +1143,9 @@ export class RoomManager {
     if (this.connections.has(connectionId)) {
       throw new DomainError('ALREADY_IN_ROOM', 'Bu bağlantı zaten bir odada.', true);
     }
+    if (this.connections.size >= this.resourceLimits.maxConnections) {
+      throw new DomainError('SERVER_CAPACITY', 'Sunucu bağlantı kapasitesine ulaştı.', true);
+    }
   }
 
   private normalizeName(name: string): string {
@@ -1123,6 +1182,7 @@ export class RoomManager {
     if (!room || !player || !player.connected) {
       throw new DomainError('PLAYER_NOT_FOUND', 'Oyuncu oturumu bulunamadı.', true);
     }
+    room.lastActivityAt = this.deps.now();
     return { room, player };
   }
 
