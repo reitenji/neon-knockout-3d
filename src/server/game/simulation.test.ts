@@ -240,6 +240,23 @@ describe('authoritative match simulation', () => {
     expect(state.players.p1.stats.knockouts).toBe(0);
   });
 
+  it('credits a recent attacker who was knocked out on a previous step', () => {
+    const state = regulationState();
+    state.players.p2.lastAttackerId = 'p1';
+    state.players.p2.lastAttackerAtMs = state.nowMs;
+    forceKnockout(state, 'p2', 'p1');
+    state.players.p2.position = { x: 640, y: 0 };
+
+    const events = stepMatch(state, new Map(), 0);
+
+    expect(state.players.p1.respawnRemainingMs).toBe(GAME.knockoutToControlMs);
+    expect(events).toContainEqual(expect.objectContaining({
+      type: 'KNOCKOUT', targetId: 'p2', scoreAwardedTo: 'p1'
+    }));
+    expect(state.scores).toEqual({ p1: 1, p2: 1 });
+    expect(state.players.p1.stats.knockouts).toBe(1);
+  });
+
   it('returns control at exactly 600 ms with a deterministic spawn and 650 ms protection', () => {
     const state = regulationState();
     forceKnockout(state, 'p1', 'p2');

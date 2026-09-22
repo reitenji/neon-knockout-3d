@@ -129,8 +129,7 @@ function recentAttacker(
   if (!target.lastAttackerId || target.lastAttackerAtMs === null) return null;
   if (state.nowMs - target.lastAttackerAtMs > 4_000) return null;
   const attacker = state.players[target.lastAttackerId];
-  return attacker && attacker.playerId !== target.playerId && attacker.respawnRemainingMs <= 0 &&
-    !knockedOutPlayerIds.has(attacker.playerId)
+  return attacker && attacker.playerId !== target.playerId && !knockedOutPlayerIds.has(attacker.playerId)
     ? attacker.playerId
     : null;
 }
