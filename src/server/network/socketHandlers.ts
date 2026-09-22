@@ -51,6 +51,7 @@ type SocketHandlerOptions = Readonly<{
   onAcceptedInput?: (playerId: string, input: InputFrame, source: GameplayTransportMode) => void;
   onLeave: (socket: GameSocket, roomCode: string) => void;
   onDisconnect: (socket: GameSocket) => void;
+  admitRoomCreation?: (socket: GameSocket) => boolean;
 }>;
 
 type Bucket = {
@@ -130,7 +131,7 @@ class SocketRateLimiter {
 }
 
 export function registerSocketHandlers(options: SocketHandlerOptions): void {
-  const { io, rooms, now, logger, transportHub, onSession, onAcceptedInput, onLeave, onDisconnect } = options;
+  const { io, rooms, now, logger, transportHub, onSession, onAcceptedInput, onLeave, onDisconnect, admitRoomCreation } = options;
 
   io.on('connection', (socket) => {
     const limiter = new SocketRateLimiter(now);
@@ -322,7 +323,10 @@ export function registerSocketHandlers(options: SocketHandlerOptions): void {
     });
 
     socket.on('room:create', (payload, callback) => {
-      acknowledge(roomCreateSchema, payload, callback, (validated) => rooms.createRoom(socket.id, validated.name), establishSession);
+      acknowledge(roomCreateSchema, payload, callback, (validated) => {
+        if (admitRoomCreation && !admitRoomCreation(socket)) throw new SafeSocketActionError(RATE_LIMITED);
+        return rooms.createRoom(socket.id, validated.name);
+      }, establishSession);
     });
     socket.on('room:join', (payload, callback) => {
       acknowledge(
