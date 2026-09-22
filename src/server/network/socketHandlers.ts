@@ -29,7 +29,7 @@ import {
 import { DomainError } from '../rooms/domainError.js';
 import type { RoomManager } from '../rooms/roomManager.js';
 import { createMatchInputIngress, type MatchInputIngress } from './matchInputIngress.js';
-import { SocketRttSampler } from './SocketRttSampler.js';
+import { PROBE_TIMEOUT_MS, SocketRttSampler } from './SocketRttSampler.js';
 import { SocketSnapshotPacer } from './SocketSnapshotPacer.js';
 import {
   GameplayTransportExpectedLifecycleError,
@@ -253,7 +253,13 @@ export function registerSocketHandlers(options: SocketHandlerOptions): void {
       const sessionRttSampler = new SocketRttSampler({
         now,
         send: (probe, acknowledgeProbe) => {
-          socket.emit('network:probe', structuredClone(probe), acknowledgeProbe);
+          socket.timeout(PROBE_TIMEOUT_MS).emit(
+            'network:probe',
+            structuredClone(probe),
+            (error, acknowledgement) => {
+              if (!error && acknowledgement) acknowledgeProbe(acknowledgement);
+            }
+          );
         },
         onSample: ({ rttMs, sampledAtMs }) => {
           if (rttSampler !== sessionRttSampler || activePlayerId !== welcome.playerId) return;

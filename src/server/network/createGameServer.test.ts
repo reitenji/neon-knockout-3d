@@ -135,13 +135,15 @@ describe('Socket.IO RTT sampling', () => {
       conn: { transport: { name: 'websocket' }, on: () => undefined },
       emit: (event: string, ...args: unknown[]): boolean => {
         if (event === 'network:probe') {
+          const acknowledgeWithTimeout = args[1] as (error: Error | null, payload: { nonce: number }) => void;
           probes.push({
             payload: args[0] as { nonce: number },
-            acknowledge: args[1] as (payload: { nonce: number }) => void
+            acknowledge: (payload) => acknowledgeWithTimeout(null, payload)
           });
         }
         return true;
       },
+      timeout: () => socket,
       join: async () => undefined,
       leave: async () => undefined,
       on: (event: string, listener: (...args: unknown[]) => void): void => {
@@ -259,13 +261,15 @@ describe('Socket.IO RTT sampling', () => {
       },
       emit: (event: string, ...args: unknown[]): boolean => {
         if (event === 'network:probe') {
+          const acknowledgeWithTimeout = args[1] as (error: Error | null, payload: { nonce: number }) => void;
           probes.push({
             payload: args[0] as { nonce: number },
-            acknowledge: args[1] as (payload: { nonce: number }) => void
+            acknowledge: (payload) => acknowledgeWithTimeout(null, payload)
           });
         }
         return true;
       },
+      timeout: () => socket,
       join: async () => undefined,
       leave: async () => undefined,
       on: (event: string, listener: (...args: unknown[]) => void): void => {
@@ -342,13 +346,15 @@ describe('Socket.IO RTT sampling', () => {
       conn: { transport: { name: 'websocket' }, on: () => undefined },
       emit: (event: string, ...args: unknown[]): boolean => {
         if (event === 'network:probe') {
+          const acknowledgeWithTimeout = args[1] as (error: Error | null, payload: { nonce: number }) => void;
           probes.push({
             payload: args[0] as { nonce: number },
-            acknowledge: args[1] as (payload: { nonce: number }) => void
+            acknowledge: (payload) => acknowledgeWithTimeout(null, payload)
           });
         }
         return true;
       },
+      timeout: () => socket,
       join: async () => undefined,
       leave: async () => undefined,
       on: (event: string, listener: (...args: unknown[]) => void): void => {
