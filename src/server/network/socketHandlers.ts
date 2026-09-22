@@ -275,6 +275,7 @@ export function registerSocketHandlers(options: SocketHandlerOptions): void {
       activePlayerId = welcome.playerId;
       transportHub.attachSession({
         socketId: socket.id,
+        sourceId: socket.handshake?.address ?? socket.conn.remoteAddress ?? 'unknown',
         playerId: welcome.playerId,
         roomCode: welcome.roomCode,
         inputIngress,

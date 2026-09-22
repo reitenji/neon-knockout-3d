@@ -193,7 +193,9 @@ type SessionHarness = Readonly<{
   networkClearTimes: number[];
 }>;
 
-function session(overrides: Partial<Pick<TransportSession, 'socketId' | 'playerId' | 'roomCode'>> = {}): SessionHarness {
+function session(
+  overrides: Partial<Pick<TransportSession, 'socketId' | 'sourceId' | 'playerId' | 'roomCode'>> = {}
+): SessionHarness {
   const acceptedInputs: InputFrame[] = [];
   const emittedErrors: ServerError[] = [];
   const emittedModes: Parameters<TransportSession['emitMode']>[0][] = [];
@@ -212,6 +214,7 @@ function session(overrides: Partial<Pick<TransportSession, 'socketId' | 'playerI
   };
   const transportSession: TransportSession = {
     socketId: overrides.socketId ?? 's1',
+    sourceId: overrides.sourceId ?? overrides.socketId ?? 's1',
     playerId: overrides.playerId ?? 'p1',
     roomCode: overrides.roomCode ?? 'AB2Z',
     inputIngress: ingress,
@@ -391,6 +394,51 @@ describe('GameplayTransportHub', () => {
       negotiationCount: 1
     });
     expect(first.networkModes).toEqual(['webrtc']);
+  });
+
+  it('reserves UDP capacity and rejects peers beyond the aggregate admission limit', async () => {
+    const factory = new FakePeerFactory();
+    const hub = new GameplayTransportHub({
+      peerFactory: factory.create,
+      udpPortRange: [53100, 53101]
+    });
+    hubs.push(hub);
+    hub.attachSession(session().session);
+    hub.attachSession(session({ socketId: 's2', sourceId: 's1', playerId: 'p2' }).session);
+
+    await hub.negotiate('s1', {
+      generationId: FIRST_GENERATION,
+      offer: { type: 'offer', sdp: 'first-offer' }
+    });
+    await expect(hub.negotiate('s2', {
+      generationId: SECOND_GENERATION,
+      offer: { type: 'offer', sdp: 'second-offer' }
+    })).rejects.toThrow(/capacity/i);
+
+    expect(factory.peers).toHaveLength(1);
+  });
+
+  it('limits peer allocation across sockets sharing a network source', async () => {
+    const factory = new FakePeerFactory();
+    const hub = new GameplayTransportHub({
+      peerFactory: factory.create,
+      udpPortRange: UDP_PORT_RANGE,
+      maxPeersPerSource: 1
+    });
+    hubs.push(hub);
+    hub.attachSession(session().session);
+    hub.attachSession(session({ socketId: 's2', sourceId: 's1', playerId: 'p2' }).session);
+
+    await hub.negotiate('s1', {
+      generationId: FIRST_GENERATION,
+      offer: { type: 'offer', sdp: 'first-offer' }
+    });
+    await expect(hub.negotiate('s2', {
+      generationId: SECOND_GENERATION,
+      offer: { type: 'offer', sdp: 'second-offer' }
+    })).rejects.toThrow(/capacity/i);
+
+    expect(factory.peers).toHaveLength(1);
   });
 
   it('keeps repeated activation of the active current generation idempotently active', async () => {
