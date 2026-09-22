@@ -534,14 +534,11 @@ export class RoomManager {
     const queued = room.inputs.get(player.playerId);
     const processed = room.match.players[player.playerId]?.lastProcessedInputSeq ?? -1;
     if (input.seq <= Math.max(queued?.seq ?? -1, processed)) return;
-    const status = networkStatus(room.network.get(player.playerId) ?? createNetworkRuntime(), this.deps.now());
     const boundedInput = {
       ...input,
       viewTick: clampClaimedViewTick({
         currentTick: room.match.tick,
         claimedViewTick: input.viewTick,
-        medianRttMs: status.medianMs,
-        jitterMs: status.jitterMs,
         historyOldestTick: room.combatHistory?.oldestTick() ?? null
       })
     };
