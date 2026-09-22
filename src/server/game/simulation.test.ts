@@ -466,22 +466,34 @@ describe('authoritative match simulation', () => {
     expect(events[1]).toMatchObject({ winnerPlayerId: 'p1', reason: 'TARGET_SCORE' });
   });
 
-  it('disconnects without awards and reconnects after a 180 ms warp with preserved state', () => {
+  it('preserves combat liabilities across a reconnect and resolves an imminent knockout', () => {
     const state = regulationState();
     const player = state.players.p2;
     player.overload = 73;
     player.stats = { knockouts: 2, falls: 3, landedHits: 4, completedAttacks: 5 };
-    state.scores.p2 = 2;
+    player.position = { x: 640, y: 0 };
+    player.velocity = { x: 0, y: -900 };
+    player.hitstunRemainingMs = 250;
+    player.lastAttackerId = 'p1';
+    player.lastAttackerAtMs = state.nowMs;
     expect(setPlayerConnected(state, 'p2', false)).toEqual([]);
     expect(snapshotMatch(state).players.map(({ playerId }) => playerId)).toEqual(['p1']);
-    expect(player.stats).toEqual({ knockouts: 2, falls: 3, landedHits: 4, completedAttacks: 5 });
     expect(setPlayerConnected(state, 'p2', true)).toEqual([]);
-    expect(player.respawnRemainingMs).toBe(GAME.reconnectWarpMs);
-    expect(stepMatch(state, new Map(), GAME.reconnectWarpMs - 1)).toEqual([]);
-    expect(stepMatch(state, new Map(), 1)).toContainEqual(expect.objectContaining({ type: 'RESPAWN', playerId: 'p2' }));
-    expect(player.overload).toBe(73);
-    expect(player.protectionRemainingMs).toBe(GAME.respawnProtectionMs);
-    expect(player.stats).toEqual({ knockouts: 2, falls: 3, landedHits: 4, completedAttacks: 5 });
+    expect(player).toMatchObject({
+      position: { x: 640, y: 0 },
+      velocity: { x: 0, y: -900 },
+      hitstunRemainingMs: 250,
+      respawnRemainingMs: 0
+    });
+
+    const events = stepMatch(state, new Map(), 0);
+
+    expect(events).toContainEqual(expect.objectContaining({
+      type: 'KNOCKOUT', attackerId: 'p1', targetId: 'p2', scoreAwardedTo: 'p1'
+    }));
+    expect(state.scores.p1).toBe(1);
+    expect(player.stats).toEqual({ knockouts: 2, falls: 4, landedHits: 4, completedAttacks: 5 });
+    expect(player.respawnRemainingMs).toBe(GAME.knockoutToControlMs);
   });
 
   it('freezes every combat clock while paused and resumes the prior phase', () => {

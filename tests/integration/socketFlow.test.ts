@@ -1189,7 +1189,7 @@ describe('Socket.IO FFA game server flow', () => {
     expect(result).toMatchObject({ winnerPlayerId: match.host.playerId, reason: 'SUDDEN_DEATH' });
   }, 15_000);
 
-  it('preserves identity, chassis, score, statistics, overload, and neutral input across reconnect and rematch', async () => {
+  it('preserves identity and authoritative combat state across reconnect and rematch', async () => {
     const match = await startMatch();
     await prepare(match);
     const hitMarker = eventMarker(match.roomCode);
@@ -1206,15 +1206,16 @@ describe('Socket.IO FFA game server flow', () => {
       resumeToken: match.guest.resumeToken
     });
     expect(resumed).toMatchObject({ playerId: match.guest.playerId, resumed: true });
-    advanceUntil(match.roomCode, (value) => player(value, match.guest.playerId).respawnRemainingMs === 0, 'reconnect warp', 400);
     const afterResume = snapshot(match.roomCode);
     expect(player(afterResume, match.guest.playerId)).toMatchObject({
       playerId: match.guest.playerId,
       chassis: guestBefore.chassis,
       accent: guestBefore.accent,
       overload: hit.resultingOverload,
-      velocity: { x: 0, y: 0 },
-      action: { kind: null, charging: false }
+      position: guestBefore.position,
+      velocity: guestBefore.velocity,
+      hitstunRemainingMs: guestBefore.hitstunRemainingMs,
+      action: guestBefore.action
     });
     expect(player(afterResume, match.guest.playerId).stats).toEqual(guestBefore.stats);
     expect(afterResume.scores).toEqual(beforeDisconnect.scores);

@@ -756,7 +756,7 @@ describe('RoomManager FFA lifecycle', () => {
     )).toHaveLength(1);
   });
 
-  it('pauses below two, keeps reservation clocks authoritative, and resumes identity at a stable 180 ms warp anchor', () => {
+  it('pauses below two, keeps reservation clocks authoritative, and resumes identity in place', () => {
     const subject = fixture();
     const { roomCode, players } = readyAndStart(subject);
     advanceCountdown(subject);
@@ -764,6 +764,7 @@ describe('RoomManager FFA lifecycle', () => {
     for (let index = 0; index < 14; index += 1) subject.manager.advance(50);
     const scoreBefore = subject.manager.debugRoom(roomCode)?.scores;
     const statsBefore = subject.snapshot(roomCode).players.find((player) => player.playerId === players[0].playerId)?.stats;
+    const positionBefore = subject.snapshot(roomCode).players.find((player) => player.playerId === players[0].playerId)?.position;
 
     subject.manager.disconnect('c-1');
     const pausedTick = subject.manager.debugRoom(roomCode)?.tick;
@@ -777,19 +778,10 @@ describe('RoomManager FFA lifecycle', () => {
       playerId: players[0].playerId,
       resumed: true
     });
-    const warp = subject.snapshot(roomCode).players.find((player) => player.playerId === players[0].playerId);
-    expect(warp).toMatchObject({ respawnRemainingMs: GAME.reconnectWarpMs, stats: statsBefore });
+    const restored = subject.snapshot(roomCode).players.find((player) => player.playerId === players[0].playerId);
+    expect(restored).toMatchObject({ position: positionBefore, respawnRemainingMs: 0, stats: statsBefore });
     expect(subject.manager.debugRoom(roomCode)?.scores).toEqual(scoreBefore);
     expect(subject.roomState(roomCode).pauseRemainingMs).toBeNull();
-
-    for (let index = 0; index < 4; index += 1) subject.manager.advance(50);
-    const restored = subject.snapshot(roomCode).players.find((player) => player.playerId === players[0].playerId);
-    const respawn = [...subject.publications].reverse().find(
-      (publication) => publication.type === 'MATCH_EVENT' && publication.event.type === 'RESPAWN' &&
-        publication.event.playerId === players[0].playerId
-    );
-    expect(restored?.respawnRemainingMs).toBe(0);
-    expect(respawn?.type === 'MATCH_EVENT' && respawn.event.type === 'RESPAWN' ? respawn.event.position : null).toEqual(warp?.position);
   });
 
   it('waits for the last viable opponent reservation before publishing one no-contest result and resetting the lobby', () => {
