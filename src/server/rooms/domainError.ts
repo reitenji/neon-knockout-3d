@@ -1,4 +1,6 @@
 export type DomainErrorCode =
+  | 'INVALID_PAYLOAD'
+  | 'INVALID_PLAYER'
   | 'BOT_NOT_FOUND'
   | 'INVALID_DIFFICULTY'
   | 'INVALID_ROLE'

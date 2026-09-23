@@ -28,7 +28,7 @@ function resultState(overrides: Partial<ClientState> = {}): ClientState {
   return {
     screen: 'RESULT', connectionState: 'connected',
     room: {
-      roomCode: 'AB2Z', phase: 'RESULT', hostPlayerId: 'p-1', pauseRemainingMs: null,
+      roomCode: 'AB2Z', phase: 'RESULT', hostPlayerId: 'p-1', pauseRemainingMs: null, chatMessages: [],
       result: {
         winnerPlayerId: 'p-2',
         reason: 'TIME',

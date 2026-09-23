@@ -8,7 +8,7 @@ import type { GameClient, GameClientConnectionState } from '../network/GameClien
 export type GameScreen = 'LANDING' | 'LOBBY' | 'MATCH' | 'RESULT';
 export type PendingAction =
   | 'create-room' | 'join-room' | 'resume' | 'chassis' | 'ready' | 'settings' | 'leave-room'
-  | 'role' | 'bot-add' | 'bot-update' | 'bot-remove' | 'start' | 'result-ready' | 'return-lobby' | null;
+  | 'chat' | 'kick' | 'role' | 'bot-add' | 'bot-update' | 'bot-remove' | 'start' | 'result-ready' | 'return-lobby' | null;
 export type ErrorAction = Exclude<PendingAction, null> | 'server' | null;
 export type CopyFeedback = 'idle' | 'copied' | 'failed';
 
@@ -41,6 +41,8 @@ export interface GameStore {
     connect(): void;
     createRoom(name: string): Promise<void>;
     joinRoom(name: string, code: string, role?: PlayerRole): Promise<void>;
+    sendChat(text: string): Promise<boolean>;
+    kickPlayer(playerId: string): Promise<void>;
     setRole(role: PlayerRole): Promise<void>;
     addBot(chassis: Chassis, difficulty: BotDifficulty): Promise<void>;
     updateBot(playerId: string, chassis: Chassis, difficulty: BotDifficulty): Promise<void>;
@@ -276,6 +278,15 @@ export function createGameStore({ client, storage, clipboard, getPreferredResume
     client.subscribe('session:welcome', (welcome) => {
       if (!departedSessionEventsSuppressed) persistWelcome(welcome);
     }),
+    client.subscribe('room:kicked', ({ roomCode }) => {
+      if (state.session?.roomCode !== roomCode) return;
+      forgetRoom(roomCode); clearReconnectTimer();
+      departedSessionEventsSuppressed = true; awaitingAuthoritativeRoom = true;
+      resumeAttemptedForConnection = true; resumeQueued = false;
+      replace({ ...state, screen: 'LANDING', room: null, match: null, session: null, pendingAction: null,
+        lastError: null, errorAction: null, reconnectRemainingMs: null,
+        toasts: [...state.toasts, { id: ++toastId, tone: 'warning', message: 'Oda sahibi seni odadan çıkardı.' }] });
+    }),
     client.subscribe('room:state', (room) => {
       if (departedSessionEventsSuppressed || !roomBelongsToCurrentSession(room)) return;
       awaitingAuthoritativeRoom = false;
@@ -326,10 +337,11 @@ export function createGameStore({ client, storage, clipboard, getPreferredResume
     action: Exclude<PendingAction, null>, invoke: () => Promise<Ack<null>>
   ): Promise<void> => {
     if (!beginAcknowledgement(action)) return;
+    const session = state.session;
     try {
       const acknowledgement = await invoke();
-      if (!disposed && !acknowledgement.ok) setFailure(action, acknowledgement.error);
-    } catch { if (!disposed) setUnexpectedFailure(action); }
+      if (!disposed && state.session === session && !acknowledgement.ok) setFailure(action, acknowledgement.error);
+    } catch { if (!disposed && state.session === session) setUnexpectedFailure(action); }
     finally { finishAcknowledgement(action); }
   };
 
@@ -363,6 +375,18 @@ export function createGameStore({ client, storage, clipboard, getPreferredResume
       } catch { if (!disposed) setUnexpectedFailure('join-room'); }
       finally { finishAcknowledgement('join-room'); }
     },
+    async sendChat(text): Promise<boolean> {
+      if (!beginAcknowledgement('chat')) return false;
+      const session = state.session;
+      try {
+        const ack = await client.sendChat(text);
+        if (disposed || state.session !== session) return false;
+        if (!ack.ok) { setFailure('chat', ack.error); return false; }
+        return true;
+      } catch { if (!disposed && state.session === session) setUnexpectedFailure('chat'); return false; }
+      finally { finishAcknowledgement('chat'); }
+    },
+    kickPlayer(playerId): Promise<void> { return runAcknowledgedAction('kick', () => client.kickPlayer(playerId)); },
     setRole(role): Promise<void> { return runAcknowledgedAction('role', () => client.setRole(role)); },
     addBot(chassis, difficulty): Promise<void> { return runAcknowledgedAction('bot-add', () => client.addBot(chassis, difficulty)); },
     updateBot(playerId, chassis, difficulty): Promise<void> { return runAcknowledgedAction('bot-update', () => client.updateBot(playerId, chassis, difficulty)); },

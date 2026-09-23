@@ -290,6 +290,25 @@ describe('Socket.IO FFA game server flow', () => {
     return connected;
   };
 
+  it('broadcasts chat, restricts removal and leaves a kicked socket reusable without its old session', async () => {
+    const hostClient = await client(), guestClient = await client();
+    const host = await emitSuccess<SessionWelcome>(hostClient, 'room:create', { name: 'Owner' });
+    const guest = await emitSuccess<SessionWelcome>(guestClient, 'room:join', { name: 'Guest', roomCode: host.roomCode });
+    const message = expectEvent(hostClient, 'room:state', state => state.chatMessages.length === 1);
+    await emitSuccess(guestClient, 'lobby:chat', { text: 'Hello' });
+    expect((await message).chatMessages[0]).toMatchObject({ playerId: guest.playerId, name: 'Guest', text: 'Hello' });
+    expect(await emitAck(guestClient, 'room:kick', { playerId: host.playerId })).toMatchObject({ ok: false, error: { code: 'NOT_HOST' } });
+    const removed = expectEvent(guestClient, 'room:kicked');
+    await emitSuccess(hostClient, 'room:kick', { playerId: guest.playerId });
+    expect(await removed).toEqual({ roomCode: host.roomCode });
+    expect(guestClient.connected).toBe(true);
+    expect(await emitAck(guestClient, 'session:resume', { roomCode: host.roomCode, resumeToken: guest.resumeToken })).toMatchObject({ ok: false });
+    expect(await emitAck(guestClient, 'lobby:chat', { text: 'no access' })).toMatchObject({ ok: false });
+    const next = await emitSuccess<SessionWelcome>(guestClient, 'room:create', { name: 'New room' });
+    expect(next.roomCode).not.toBe(host.roomCode);
+    expect(serverErrors).toEqual([]);
+  });
+
   const harness = () => {
     if (!server.testHarness) throw new Error('Integration server requires its in-process test harness.');
     return server.testHarness;

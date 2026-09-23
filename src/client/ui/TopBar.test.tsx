@@ -29,7 +29,7 @@ function room(phase: RoomPhase): RoomState {
     roomCode: 'AB2Z',
     phase,
     hostPlayerId: 'p-1',
-    pauseRemainingMs: null,
+    pauseRemainingMs: null, chatMessages: [],
     result: phase === 'RESULT' ? { winnerPlayerId: 'p-1', reason: 'TIME', players: [] } : null,
     settings: DEFAULT_ROOM_SETTINGS,
     players: []
@@ -49,6 +49,7 @@ describe('TopBar', () => {
     render(
       <TopBar
         state={state({ screen: screenName, room: room(roomPhase), session })}
+        onKickPlayer={vi.fn(async () => undefined)}
         onToggleSound={vi.fn()}
         onLeaveRoom={vi.fn(async () => undefined)}
       />
@@ -64,6 +65,7 @@ describe('TopBar', () => {
     render(
       <TopBar
         state={state({ screen: 'LOBBY', room: room('LOBBY'), session })}
+        onKickPlayer={vi.fn(async () => undefined)}
         onToggleSound={onToggleSound}
         onLeaveRoom={onLeaveRoom}
       />
@@ -84,6 +86,7 @@ describe('TopBar', () => {
     render(
       <TopBar
         state={state({ screen: 'LOBBY', room: room('LOBBY'), session, pendingAction })}
+        onKickPlayer={vi.fn(async () => undefined)}
         onToggleSound={vi.fn()}
         onLeaveRoom={onLeaveRoom}
       />
@@ -106,6 +109,7 @@ describe('TopBar', () => {
           lastError: { code: 'ROOM_LEAVE_FAILED', message: 'Odadan çıkılamadı. Tekrar dene.', recoverable: true },
           errorAction: 'leave-room'
         })}
+        onKickPlayer={vi.fn(async () => undefined)}
         onToggleSound={vi.fn()}
         onLeaveRoom={vi.fn(async () => undefined)}
       />
@@ -117,7 +121,7 @@ describe('TopBar', () => {
 
   it('hides leave room on landing and when either room identity is missing', () => {
     const renderTopBar = (clientState: ClientState) => render(
-      <TopBar state={clientState} onToggleSound={vi.fn()} onLeaveRoom={vi.fn(async () => undefined)} />
+      <TopBar onKickPlayer={vi.fn(async () => undefined)} state={clientState} onToggleSound={vi.fn()} onLeaveRoom={vi.fn(async () => undefined)} />
     );
 
     const view = renderTopBar(state({ screen: 'LANDING', room: room('LOBBY'), session }));

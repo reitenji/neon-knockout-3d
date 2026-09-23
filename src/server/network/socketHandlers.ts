@@ -8,6 +8,7 @@ import {
 } from '../../shared/gameplayTransport.js';
 import type { GameplayTransportMode } from '../../shared/gameplayTransport.js';
 import {
+  lobbyChatSchema, roomKickSchema,
   lobbyChassisSchema,
   lobbyRoleSchema,
   lobbyBotAddSchema,
@@ -133,6 +134,7 @@ class SocketRateLimiter {
 export function registerSocketHandlers(options: SocketHandlerOptions): void {
   const { io, rooms, now, logger, transportHub, onSession, onAcceptedInput, onLeave, onDisconnect, admitRoomCreation } = options;
 
+  const kickSessions = new Map<string, (roomCode: string) => Promise<void>>();
   io.on('connection', (socket) => {
     const limiter = new SocketRateLimiter(now);
     const inputIngress = createMatchInputIngress({
@@ -329,6 +331,23 @@ export function registerSocketHandlers(options: SocketHandlerOptions): void {
       }
     });
 
+    kickSessions.set(socket.id, async (roomCode) => {
+      disposeRttSampler(); disposeSnapshotPacer(); activePlayerId = null;
+      socket.emit('room:kicked', { roomCode });
+      await socket.leave(roomCode);
+      onLeave(socket, roomCode);
+      await transportHub.detachSession(socket.id);
+    });
+    socket.on('lobby:chat', (payload, callback) => {
+      acknowledge(lobbyChatSchema, payload, callback, ({ text }) => { rooms.sendChat(socket.id, text); return null; });
+    });
+    socket.on('room:kick', (payload, callback) => {
+      acknowledgeAsync(roomKickSchema, payload, callback, async ({ playerId }) => {
+        const target = rooms.kickPlayer(socket.id, playerId);
+        if (target.connectionId) await kickSessions.get(target.connectionId)?.(target.roomCode);
+        return null;
+      });
+    });
     socket.on('room:create', (payload, callback) => {
       acknowledge(roomCreateSchema, payload, callback, (validated) => {
         if (admitRoomCreation && !admitRoomCreation(socket)) throw new SafeSocketActionError(RATE_LIMITED);
@@ -469,6 +488,7 @@ export function registerSocketHandlers(options: SocketHandlerOptions): void {
       if (result.status === 'error') socket.emit('server:error', result.error);
     });
     socket.on('disconnect', () => {
+      kickSessions.delete(socket.id);
       disposeRttSampler();
       disposeSnapshotPacer();
       rooms.disconnect(socket.id);

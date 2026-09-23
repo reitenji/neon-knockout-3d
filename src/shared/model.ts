@@ -65,6 +65,8 @@ export type ResultPlayer = Readonly<RoomPlayer & {
   resultStatus: ResultPlayerStatus;
 }>;
 
+export type LobbyChatMessage = Readonly<{ id: number; playerId: string; name: string; text: string; sentAt: number }>;
+
 export type RoomState = Readonly<{
   roomCode: string;
   phase: RoomPhase;
@@ -77,6 +79,7 @@ export type RoomState = Readonly<{
   }> | null;
   settings: RoomSettings;
   players: readonly RoomPlayer[];
+  chatMessages: readonly LobbyChatMessage[];
 }>;
 
 export type MatchAction = Readonly<{

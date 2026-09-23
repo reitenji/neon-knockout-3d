@@ -17,7 +17,7 @@ function player(overrides: Partial<RoomPlayer> = {}): RoomPlayer {
 }
 function room(overrides: Partial<RoomState> = {}): RoomState {
   return {
-    roomCode: 'AB2Z', phase: 'LOBBY', hostPlayerId: 'player-1', pauseRemainingMs: null, result: null,
+    roomCode: 'AB2Z', phase: 'LOBBY', hostPlayerId: 'player-1', pauseRemainingMs: null, chatMessages: [], result: null,
     settings: DEFAULT_ROOM_SETTINGS,
     players: [player(), player({ role: 'FIGHTER', botDifficulty: null, playerId: 'player-2', name: 'Linus', chassis: 'BASTION', accent: 1, ready: true })],
     ...overrides
@@ -38,6 +38,7 @@ function renderLobby(clientState = state(), handlers: Partial<Parameters<typeof 
     onSetRole: vi.fn(async () => undefined),
     onAddBot: vi.fn(async () => undefined),
     onUpdateBot: vi.fn(async () => undefined),
+    onSendChat: vi.fn(async () => true),
     onRemoveBot: vi.fn(async () => undefined),
     onSetChassis: vi.fn(async () => undefined),
     onToggleReady: vi.fn(async () => undefined),
@@ -218,4 +219,13 @@ describe('Sites room invitations', () => {
     expect(screen.getByRole('textbox', { name: 'Oda linki' })).toHaveValue('http://localhost:3000/room/AB2Z');
   });
 
+});
+
+
+it('explains unavailable chat when joining a still-open host running the previous Sites version', () => {
+  const legacyRoom = room();
+  delete (legacyRoom as unknown as { chatMessages?: unknown }).chatMessages;
+  renderLobby(state({ room: legacyRoom }));
+  expect(screen.getByText('Sohbet için oda sahibinin oyunu güncelleyip yeni bir oda açması gerekiyor.')).toBeVisible();
+  expect(screen.queryByRole('textbox', { name: 'Mesaj' })).toBeNull();
 });

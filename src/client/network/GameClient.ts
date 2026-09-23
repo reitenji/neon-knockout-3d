@@ -8,6 +8,7 @@ import { createMatchPublicationSequencer } from './MatchPublicationSequencer.js'
 export type GameClientConnectionState = 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
 
 export type GameClientEvents = {
+  'room:kicked': (notice: Readonly<{ roomCode: string }>) => void;
   connection: (state: GameClientConnectionState) => void;
   'session:welcome': (welcome: SessionWelcome) => void;
   'room:state': (state: RoomState) => void;
@@ -25,6 +26,8 @@ export interface GameClient {
   createRoom(name: string): Promise<Ack<SessionWelcome>>;
   joinRoom(name: string, roomCode: string, role?: PlayerRole): Promise<Ack<SessionWelcome>>;
   resumeSession(roomCode: string, resumeToken: string): Promise<Ack<SessionWelcome>>;
+  sendChat(text: string): Promise<Ack<null>>;
+  kickPlayer(playerId: string): Promise<Ack<null>>;
   setRole(role: PlayerRole): Promise<Ack<null>>;
   addBot(chassis: Chassis, difficulty: BotDifficulty): Promise<Ack<null>>;
   updateBot(playerId: string, chassis: Chassis, difficulty: BotDifficulty): Promise<Ack<null>>;
@@ -60,6 +63,7 @@ function createListenerSets(): ListenerSets {
     connection: new Set(),
     'session:welcome': new Set(),
     'room:state': new Set(),
+    'room:kicked': new Set(),
     'match:started': new Set(),
     'match:snapshot': new Set(),
     'match:event': new Set(),
@@ -193,6 +197,10 @@ export function createSocketGameClient(options: SocketGameClientOptions = {}): G
     publish('session:welcome', welcome);
   });
   let spectator = false;
+  socket.on('room:kicked', (notice) => {
+    disposeActiveBundle(); hasSession = false; localPlayerId = null; roomPhase = null;
+    publish('room:kicked', notice);
+  });
   socket.on('room:state', (state) => {
     spectator = state.players.find((player) => player.playerId === localPlayerId)?.role === 'SPECTATOR';
     const startsFreshGeneration = hasSession && roomPhase === 'RESULT' && state.phase === 'LOBBY';
@@ -243,6 +251,8 @@ export function createSocketGameClient(options: SocketGameClientOptions = {}): G
     resumeSession(roomCode: string, resumeToken: string): Promise<Ack<SessionWelcome>> {
       return withAckTimeout((acknowledge) => socket.emit('session:resume', { roomCode, resumeToken }, acknowledge));
     },
+    sendChat(text) { return withAckTimeout((acknowledge) => socket.emit('lobby:chat', { text }, acknowledge)); },
+    kickPlayer(playerId) { return withAckTimeout((acknowledge) => socket.emit('room:kick', { playerId }, acknowledge)); },
     setRole(role): Promise<Ack<null>> {
       return withAckTimeout((acknowledge) => socket.emit('lobby:role', { role }, acknowledge));
     },

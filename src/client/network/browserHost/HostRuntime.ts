@@ -6,6 +6,7 @@ import * as protocol from '../../../shared/protocol.js';
 import { RTT_SAMPLE_LIMIT } from '../../../shared/gameplayTransport.js';
 
 const payloads = {
+  chat: protocol.lobbyChatSchema, kick: protocol.roomKickSchema,
   join: protocol.roomJoinSchema, resume: protocol.sessionResumeSchema,
   role: protocol.lobbyRoleSchema, addBot: protocol.lobbyBotAddSchema, updateBot: protocol.lobbyBotUpdateSchema,
   removeBot: protocol.lobbyBotRemoveSchema, chassis: protocol.lobbyChassisSchema, ready: protocol.lobbyReadySchema,
@@ -14,7 +15,7 @@ const payloads = {
   pong: z.object({ nonce: z.number().int().positive() }).strict()
 } as const;
 export type HostCommand = keyof typeof payloads;
-export type HostEvent = { event: 'room:state' | 'match:started' | 'match:snapshot' | 'match:event' | 'server:error' | 'network:probe'; data: unknown };
+export type HostEvent = { event: 'room:kicked' | 'room:state' | 'match:started' | 'match:snapshot' | 'match:event' | 'server:error' | 'network:probe'; data: unknown };
 export const LOCAL_HOST = 'local-host';
 export const requestSchema = z.object({ id: z.number().int().nonnegative(), command: z.enum(Object.keys(payloads) as [HostCommand, ...HostCommand[]]), payload: z.unknown() }).strict();
 const failure = (code: string, message: string): Ack<never> => ({ ok: false, error: { code, message, recoverable: true } });
@@ -66,6 +67,15 @@ export class HostRuntime {
         return { ok: true, data: welcome };
       }
       switch (command) {
+        case 'chat': this.rooms.sendChat(connection, protocol.lobbyChatSchema.parse(payload).text); break;
+        case 'kick': {
+          const target = this.rooms.kickPlayer(connection, protocol.roomKickSchema.parse(payload).playerId);
+          if (target.connectionId) {
+            this.members.delete(target.connectionId); this.timings.delete(target.connectionId);
+            this.send(target.connectionId, { event: 'room:kicked', data: { roomCode: target.roomCode } });
+          }
+          break;
+        }
         case 'role': this.rooms.setRole(connection, protocol.lobbyRoleSchema.parse(payload).role); break;
         case 'addBot': { const p = protocol.lobbyBotAddSchema.parse(payload); this.rooms.addBot(connection, p.chassis, p.difficulty); break; }
         case 'updateBot': { const p = protocol.lobbyBotUpdateSchema.parse(payload); this.rooms.updateBot(connection, p.playerId, p.chassis, p.difficulty); break; }

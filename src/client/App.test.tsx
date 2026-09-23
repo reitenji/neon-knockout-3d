@@ -29,6 +29,8 @@ function storeFor(state: ClientState): GameStore {
       setRole: vi.fn(async () => undefined),
       addBot: vi.fn(async () => undefined),
       updateBot: vi.fn(async () => undefined),
+      sendChat: vi.fn(async () => true),
+      kickPlayer: vi.fn(async () => undefined),
       removeBot: vi.fn(async () => undefined),
       setChassis: vi.fn(async () => undefined),
       setReady: vi.fn(async () => undefined),
@@ -218,7 +220,7 @@ describe('App', () => {
       ...landing,
       screen: 'RESULT',
       room: {
-        roomCode: 'AB2Z', phase: 'RESULT', hostPlayerId: 'p-1', pauseRemainingMs: null,
+        roomCode: 'AB2Z', phase: 'RESULT', hostPlayerId: 'p-1', pauseRemainingMs: null, chatMessages: [],
         result: {
           winnerPlayerId: 'p-1',
           reason: 'TARGET_SCORE',
@@ -249,7 +251,7 @@ describe('App', () => {
       ...landing,
       screen: 'LOBBY',
       room: {
-        roomCode: 'AB2Z', phase: 'LOBBY', hostPlayerId: 'p-1', pauseRemainingMs: null, result: null,
+        roomCode: 'AB2Z', phase: 'LOBBY', hostPlayerId: 'p-1', pauseRemainingMs: null, chatMessages: [], result: null,
         settings: DEFAULT_ROOM_SETTINGS,
         players: [{
           role: 'FIGHTER', botDifficulty: null,
@@ -274,7 +276,7 @@ describe('App', () => {
       ...landing,
       screen: 'LOBBY',
       room: {
-        roomCode: 'AB2Z', phase: 'LOBBY', hostPlayerId: 'p-1', pauseRemainingMs: null, result: null,
+        roomCode: 'AB2Z', phase: 'LOBBY', hostPlayerId: 'p-1', pauseRemainingMs: null, chatMessages: [], result: null,
         settings: DEFAULT_ROOM_SETTINGS,
         players: [{
           role: 'FIGHTER', botDifficulty: null,

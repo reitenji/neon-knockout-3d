@@ -8,6 +8,7 @@ import {
 } from '../../shared/gameplayTransport.js';
 import { DEFAULT_ROOM_SETTINGS, type RoomSettings } from '../../shared/roomSettings.js';
 import type {
+  LobbyChatMessage,
   BotDifficulty,
   PlayerRole,
   Chassis,
@@ -39,6 +40,7 @@ import { createEmptyInput, createMatchState, createPlayerStats, type MatchState 
 import { clearPulses, removePulsesOwnedBy } from '../game/projectiles.js';
 import { BotController } from '../game/botController.js';
 import { BOT_DIFFICULTIES } from '../../shared/model.js';
+import { lobbyChatSchema } from '../../shared/protocol.js';
 import { DomainError } from './domainError.js';
 
 const ROOM_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -117,6 +119,9 @@ type Room = {
   accumulatorMs: number;
   snapshotAccumulatorMs: number;
   lastActivityAt: number;
+  chatMessages: LobbyChatMessage[];
+  nextChatId: number;
+  lastChatAt: Map<string, number>;
 };
 
 type PlayerNetworkRuntime = {
@@ -283,6 +288,7 @@ export class RoomManager {
       bots: new Map(),
       accumulatorMs: 0,
       snapshotAccumulatorMs: 0,
+      chatMessages: [], nextChatId: 1, lastChatAt: new Map(),
       lastActivityAt: this.deps.now()
     };
     this.rooms.set(roomCode, room);
@@ -463,11 +469,40 @@ export class RoomManager {
     this.publishRoom(room);
   }
 
+  sendChat(connectionId: string, text: string): void {
+    const { room, player } = this.requireConnectedPlayer(connectionId);
+    if (room.phase !== 'LOBBY') throw new DomainError('INVALID_PHASE', 'Sohbet yalnızca lobide kullanılabilir.', true);
+    const parsed = lobbyChatSchema.safeParse({ text });
+    if (!parsed.success) throw new DomainError('INVALID_PAYLOAD', 'Mesaj 1–240 karakter olmalıdır.', true);
+    const now = this.deps.now();
+    const previous = room.lastChatAt.get(player.playerId);
+    if (previous !== undefined && now - previous < 1000) throw new DomainError('RATE_LIMITED', 'Çok hızlı mesaj gönderiyorsun. Biraz bekle.', true);
+    room.lastChatAt.set(player.playerId, now);
+    room.chatMessages.push({ id: room.nextChatId++, playerId: player.playerId, name: player.name, text: parsed.data.text, sentAt: now });
+    if (room.chatMessages.length > 50) room.chatMessages.shift();
+    this.publishRoom(room);
+  }
+
+  kickPlayer(connectionId: string, playerId: string): { connectionId: string | null; roomCode: string } {
+    const { room, player } = this.requireConnectedPlayer(connectionId);
+    if (room.hostPlayerId !== player.playerId) throw new DomainError('NOT_HOST', 'Bu işlemi yalnızca oda sahibi yapabilir.', true);
+    const target = room.players.get(playerId);
+    if (!target || target.botDifficulty || target.playerId === player.playerId) throw new DomainError('INVALID_PLAYER', 'Bu oyuncu çıkarılamaz.', true);
+    const targetConnection = [...this.connections].find(([, session]) => session.roomCode === room.roomCode && session.playerId === playerId)?.[0] ?? null;
+    this.removePlayer(room, target, targetConnection);
+    return { connectionId: targetConnection, roomCode: room.roomCode };
+  }
+
   leaveRoom(connectionId: string): string {
     const { room, player } = this.requireConnectedPlayer(connectionId);
+    return this.removePlayer(room, player, connectionId);
+  }
+
+  private removePlayer(room: Room, player: RoomPlayer, connectionId: string | null): string {
     const leavingHost = room.hostPlayerId === player.playerId;
     if (room.phase === 'RESULT') this.markResultPlayerLeft(room, player);
-    this.connections.delete(connectionId);
+    if (connectionId !== null) this.connections.delete(connectionId);
+    room.lastChatAt.delete(player.playerId);
     room.inputs.delete(player.playerId);
     room.players.delete(player.playerId);
     if (room.match) {
@@ -759,6 +794,7 @@ export class RoomManager {
           if (room.phase === 'RESULT') this.markResultPlayerLeft(room, player);
           if (room.match) removePulsesOwnedBy(room.match, player.playerId);
           room.players.delete(player.playerId);
+          room.lastChatAt.delete(player.playerId);
           if (room.match) {
             delete room.match.players[player.playerId];
             delete room.match.scores[player.playerId];
@@ -1233,6 +1269,7 @@ export class RoomManager {
         pauseRemainingMs: room.match?.phase === 'PAUSED' ? this.pauseRemainingMs(room) : null,
         result,
         settings: { ...room.settings },
+        chatMessages: [...room.chatMessages],
         players: this.orderedPlayers(room).map((player) => ({
           role: player.role,
           botDifficulty: player.botDifficulty,

@@ -98,3 +98,18 @@ describe('browser-host gameplay ping', () => {
     expect(s.host.handle('peer', 'pong', s.probe())).toMatchObject({ ok: false });
   });
 });
+
+it('validates chat identity, removes a guest and stops all subsequent peer publications', () => {
+  const { host, welcome, events } = fixture();
+  const joined = host.handle('peer', 'join', { roomCode: welcome.roomCode, name: 'Guest' });
+  if (!joined.ok || !joined.data) throw new Error('join failed');
+  expect(host.handle('peer', 'chat', { text: 'Hello', name: 'Forged' })).toMatchObject({ ok: false });
+  expect(host.handle('peer', 'chat', { text: 'Hello' })).toMatchObject({ ok: true });
+  expect(host.handle('peer', 'kick', { playerId: welcome.playerId })).toMatchObject({ ok: false, error: { code: 'NOT_HOST' } });
+  expect(host.handle(LOCAL_HOST, 'kick', { playerId: joined.data.playerId })).toMatchObject({ ok: true });
+  expect(events.at(-1)).toEqual({ connection: 'peer', event: { event: 'room:kicked', data: { roomCode: welcome.roomCode } } });
+  events.length = 0; host.advance(17); host.handle(LOCAL_HOST, 'chat', { text: 'Private now' });
+  expect(events.some(event => event.connection === 'peer')).toBe(false);
+  expect(host.handle('peer', 'ready', { ready: true })).toMatchObject({ ok: false });
+  expect(host.handle('new', 'resume', { roomCode: welcome.roomCode, resumeToken: joined.data.resumeToken })).toMatchObject({ ok: false });
+});

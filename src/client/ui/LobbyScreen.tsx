@@ -11,6 +11,7 @@ import {
 } from '../../shared/roomSettings.js';
 import { selectCanStart, selectSelfPlayer, type ClientState } from '../state/gameStore.js';
 import { LanSharePanel } from './LanSharePanel.js';
+import { LobbyChat } from './LobbyChat.js';
 import { RoomSharePanel } from './RoomSharePanel.js';
 
 type LobbyScreenProps = Readonly<{
@@ -18,6 +19,7 @@ type LobbyScreenProps = Readonly<{
   onSetRole: (role: PlayerRole) => Promise<void>;
   onAddBot: (chassis: Chassis, difficulty: BotDifficulty) => Promise<void>;
   onUpdateBot: (playerId: string, chassis: Chassis, difficulty: BotDifficulty) => Promise<void>;
+  onSendChat: (text: string) => Promise<boolean>;
   onRemoveBot: (playerId: string) => Promise<void>;
   onSetChassis: (chassis: Chassis) => Promise<void>;
   onToggleReady: (ready: boolean) => Promise<void>;
@@ -71,6 +73,7 @@ export function LobbyScreen({
   onSetRole,
   onAddBot,
   onUpdateBot,
+  onSendChat,
   onRemoveBot,
   onSetChassis,
   onToggleReady,
@@ -245,6 +248,9 @@ export function LobbyScreen({
             {spectators.map((candidate) => <PlayerRow key={candidate.playerId} player={candidate} hostPlayerId={room.hostPlayerId} />)}
           </ul> : null}
         </section>
+
+        {room.chatMessages ? <LobbyChat messages={room.chatMessages} onSend={onSendChat} disabled={anyPending || state.connectionState !== 'connected'} error={state.errorAction === 'chat' ? state.lastError?.message : undefined} />
+          : <p className="lobby-chat__empty">Sohbet için oda sahibinin oyunu güncelleyip yeni bir oda açması gerekiyor.</p>}
 
         <div className="lobby-feedback">
           {lobbyError ? <p className="inline-error" role="alert">{lobbyError.message}</p> : null}

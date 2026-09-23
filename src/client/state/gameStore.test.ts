@@ -17,7 +17,7 @@ class MemoryStorage implements Pick<Storage, 'getItem' | 'setItem' | 'removeItem
 
 class FakeGameClient implements GameClient {
   private readonly listeners: { [K in keyof GameClientEvents]: Set<GameClientEvents[K]> } = {
-    connection: new Set(), 'session:welcome': new Set(), 'room:state': new Set(), 'match:started': new Set(),
+    'room:kicked': new Set(), connection: new Set(), 'session:welcome': new Set(), 'room:state': new Set(), 'match:started': new Set(),
     'match:snapshot': new Set(), 'match:event': new Set(), 'server:error': new Set()
   };
   readonly unsubscribeCalls = vi.fn();
@@ -30,6 +30,8 @@ class FakeGameClient implements GameClient {
   readonly setRole = vi.fn<GameClient['setRole']>(async () => ({ ok: true, data: null }));
   readonly addBot = vi.fn<GameClient['addBot']>(async () => ({ ok: true, data: null }));
   readonly updateBot = vi.fn<GameClient['updateBot']>(async () => ({ ok: true, data: null }));
+  readonly sendChat = vi.fn<GameClient['sendChat']>(async () => ({ ok: true, data: null }));
+  readonly kickPlayer = vi.fn<GameClient['kickPlayer']>(async () => ({ ok: true, data: null }));
   readonly removeBot = vi.fn<GameClient['removeBot']>(async () => ({ ok: true, data: null }));
   readonly setChassis = vi.fn<(chassis: Chassis) => Promise<Ack<null>>>(async () => ({ ok: true, data: null }));
   readonly setReady = vi.fn<(ready: boolean) => Promise<Ack<null>>>(async () => ({ ok: true, data: null }));
@@ -72,7 +74,7 @@ function player(overrides: Partial<RoomPlayer> = {}): RoomPlayer {
 }
 function roomState(overrides: Partial<RoomState> = {}): RoomState {
   return {
-    roomCode: 'AB2Z', phase: 'LOBBY', hostPlayerId: 'player-1', pauseRemainingMs: null, result: null,
+    roomCode: 'AB2Z', phase: 'LOBBY', hostPlayerId: 'player-1', pauseRemainingMs: null, chatMessages: [], result: null,
     settings: DEFAULT_ROOM_SETTINGS,
     players: [player()], ...overrides
   };
@@ -598,10 +600,26 @@ describe('createGameStore', () => {
     matchUnsubscribe(); matchUnsubscribe();
     eventUnsubscribe(); eventUnsubscribe();
     store.dispose(); store.dispose();
-    expect(client.unsubscribeCalls).toHaveBeenCalledTimes(7);
+    expect(client.unsubscribeCalls).toHaveBeenCalledTimes(8);
     expect(client.disconnect).toHaveBeenCalledOnce();
     const before = store.getSnapshot();
     client.emit('server:error', { code: 'ROOM_FULL', message: 'Oda dolu.', recoverable: true } satisfies ServerError);
     expect(store.getSnapshot()).toBe(before);
   });
+});
+
+it('forgets a kicked session and suppresses late publications and failed acknowledgements', async () => {
+  const { client, store, storage } = createFixture();
+  client.emit('session:welcome', successWelcome()); client.emit('room:state', roomState());
+  let resolve!: (ack: Ack<null>) => void;
+  client.setReady.mockImplementation(() => new Promise(done => { resolve = done; }));
+  const pending = store.actions.setReady(true);
+  client.emit('room:kicked', { roomCode: 'AB2Z' });
+  resolve({ ok: false, error: { code: 'OLD', message: 'old error', recoverable: true } }); await pending;
+  client.emit('room:state', roomState()); client.emit('session:welcome', successWelcome());
+  client.emit('connection', 'disconnected'); client.emit('connection', 'connected');
+  expect(store.getSnapshot()).toMatchObject({ screen: 'LANDING', session: null, room: null, lastError: null });
+  expect(storage.getItem('neon-relay:AB2Z:resume')).toBeNull();
+  expect(client.resumeSession).not.toHaveBeenCalled();
+  expect(store.getSnapshot().toasts.at(-1)?.message).toContain('çıkardı'); store.dispose();
 });
