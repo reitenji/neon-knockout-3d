@@ -910,6 +910,7 @@
 }
 
 .result-table {
+  table-layout: fixed;
   width: 100%;
   border-collapse: collapse;
 }
@@ -921,7 +922,13 @@
   text-align: left;
 }
 
-.result-table th[scope="row"] { width: 28%; max-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.result-table thead th:nth-child(1) { width: 8%; }
+.result-table thead th:nth-child(2) { width: 26%; }
+.result-table thead th:nth-child(3) { width: 7%; }
+.result-table thead th:nth-child(4), .result-table thead th:nth-child(5) { width: 11%; }
+.result-table thead th:nth-child(6) { width: 13%; }
+.result-table thead th:nth-child(7) { width: 24%; }
+.result-table th[scope="row"] { max-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .result-table .is-winner {
   color: var(--color-ready);
@@ -1277,7 +1284,7 @@
 
   .result-table th,
   .result-table td {
-    padding-inline: 5px;
+    padding-inline: 2px;
   }
 
   .toast-region {

@@ -54,6 +54,7 @@ for (const mobile of [false, true]) {
       expect(await host.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       expect(await host.page.locator('.result-frame').evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
       await expect(host.page.getByRole('rowheader', { name: hostName })).toHaveAttribute('title', hostName);
+      expect((await host.page.getByRole('rowheader', { name: hostName }).boundingBox())!.width).toBeGreaterThan(70);
       await host.page.screenshot({ animations: 'disabled', path: info.outputPath('result.png') });
       await host.page.getByRole('button', { name: 'Lobiye Dön', exact: true }).click();
       await expect(guest.page.getByRole('region', { name: 'Oda lobisi' })).toBeVisible();
