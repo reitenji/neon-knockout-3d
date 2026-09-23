@@ -193,7 +193,7 @@ describe('shared input boundary protocol', () => {
       roomCode: 'AB2Z',
       phase: 'MATCH',
       hostPlayerId: 'p1',
-      pauseRemainingMs: null,
+      pauseRemainingMs: null, chatMessages: [],
       result: null,
       settings: DEFAULT_ROOM_SETTINGS,
       players: [

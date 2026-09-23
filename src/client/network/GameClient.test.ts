@@ -174,7 +174,7 @@ import { createSocketGameClient } from './GameClient.js';
 
 function roomState(): RoomState {
   return {
-    roomCode: 'AB2Z', phase: 'LOBBY', hostPlayerId: 'player-1', pauseRemainingMs: null,
+    roomCode: 'AB2Z', phase: 'LOBBY', hostPlayerId: 'player-1', pauseRemainingMs: null, chatMessages: [],
     result: null, settings: DEFAULT_ROOM_SETTINGS, players: []
   };
 }

@@ -74,5 +74,12 @@ it.each(['LOBBY', 'MATCH'] as const)('synchronizes a new guest directly into %s 
     await game.actions.joinRoom('Guest again', created.data.roomCode);
     await vi.waitFor(() => expect(game.getSnapshot().screen).toBe('LOBBY'));
   }
+  const guestId = game.getSnapshot().session!.playerId;
+  expect(host.handle(LOCAL_HOST, 'kick', { playerId: guestId })).toMatchObject({ ok: true });
+  expect(game.getSnapshot()).toMatchObject({ screen: 'LANDING', session: null, room: null });
+  expect([...storage.keys()].some(key => key.endsWith(':resume'))).toBe(false);
+  expect(game.getSnapshot().toasts.at(-1)?.message).toContain('çıkardı');
+  await game.actions.createRoom('New host');
+  await vi.waitFor(() => expect(game.getSnapshot().screen).toBe('LOBBY'));
   client.disconnect();
 });
