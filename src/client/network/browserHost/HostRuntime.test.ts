@@ -125,3 +125,44 @@ it('enforces browser membership for the Sites owner and peers', () => {
   runtime.disconnect('guest');
   expect(join('guest-reconnected', 'b'.repeat(32))).toMatchObject({ ok: true, data: { resumed: true } });
 });
+
+
+describe('browser-host presence', () => {
+  afterEach(() => vi.useRealTimers());
+
+  it('disconnects a silent guest without a channel close and expires the reserved seat', () => {
+    vi.useFakeTimers({ toFake: ['Date', 'performance'] });
+    const {host, welcome} = fixture();
+    host.handle('silent', 'join', {roomCode: welcome.roomCode, name: 'Silent'});
+    host.advance(17);
+    for (let i = 0; i < 3; i++) {
+      vi.advanceTimersByTime(2000);
+      host.advance(17);
+    }
+    expect(host.rooms.debugRoom(welcome.roomCode)).toMatchObject({connectedCount: 1, reservedCount: 1});
+    expect(host.handle('silent', 'ready', {ready: true})).toMatchObject({ok: false});
+    vi.advanceTimersByTime(20_000);
+    host.advance(17);
+    expect(host.rooms.debugRoom(welcome.roomCode)).toMatchObject({connectedCount: 1, reservedCount: 0});
+  });
+
+  it('keeps a responsive idle guest and tolerates a host timer suspension', () => {
+    vi.useFakeTimers({ toFake: ['Date', 'performance'] });
+    const {host, welcome, events} = fixture();
+    host.handle('peer', 'join', {roomCode: welcome.roomCode, name: 'Idle'});
+    const pong = () => host.handle('peer', 'pong', events.filter(e => e.connection === 'peer' && e.event.event === 'network:probe').at(-1)!.event.data);
+    host.advance(17);
+    vi.advanceTimersByTime(60_000);
+    host.advance(17);
+    expect(pong()).toMatchObject({ok: true});
+    for (let i = 0; i < 5; i++) {
+      vi.advanceTimersByTime(2000);
+      host.advance(17);
+      vi.advanceTimersByTime(2000);
+      host.advance(17);
+      vi.advanceTimersByTime(20);
+      expect(pong()).toMatchObject({ok: true});
+    }
+    expect(host.rooms.debugRoom(welcome.roomCode)).toMatchObject({connectedCount: 2, reservedCount: 0});
+  });
+});

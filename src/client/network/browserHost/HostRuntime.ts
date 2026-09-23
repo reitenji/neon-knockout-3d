@@ -19,7 +19,7 @@ export type HostEvent = { event: 'room:kicked' | 'room:state' | 'match:started' 
 export const LOCAL_HOST = 'local-host';
 export const requestSchema = z.object({ id: z.number().int().nonnegative(), command: z.enum(Object.keys(payloads) as [HostCommand, ...HostCommand[]]), payload: z.unknown() }).strict();
 const failure = (code: string, message: string): Ack<never> => ({ ok: false, error: { code, message, recoverable: true } });
-type PeerTiming = { pending: { nonce: number; sentAt: number } | null; nextAt: number; samples: number[] };
+type PeerTiming = { pending: { nonce: number; sentAt: number } | null; nextAt: number; missed: number; samples: number[] };
 function median(values: number[]): number {
   if (!values.length) return 0;
   const sorted = [...values].sort((a, b) => a - b), middle = Math.floor(sorted.length / 2);
@@ -35,7 +35,10 @@ export class HostRuntime {
   private timings = new Map<string, PeerTiming>();
   private probeNonce = 0;
 
-  constructor(private readonly send: (connection: string, event: HostEvent) => void) {
+  constructor(
+    private readonly send: (connection: string, event: HostEvent) => void,
+    private readonly closePeer: (connection: string) => void = () => {}
+  ) {
     this.rooms = new RoomManager({ now: () => Date.now(), randomBytes: size => crypto.getRandomValues(new Uint8Array(size)), publish: event => this.publish(event) });
   }
 
@@ -63,7 +66,7 @@ export class HostRuntime {
           ? (() => { const p = protocol.roomJoinSchema.parse(payload); return this.rooms.joinRoom(connection, p.roomCode, p.name, p.role, p.browserId); })()
           : (() => { const p = protocol.sessionResumeSchema.parse(payload); return this.rooms.resume(connection, p.roomCode, p.resumeToken, 'webrtc'); })();
         this.members.add(connection); this.rooms.setTransport(connection, 'webrtc'); this.sync(connection);
-        this.timings.set(connection, { pending: null, nextAt: 0, samples: [] });
+        this.timings.set(connection, { pending: null, nextAt: 0, missed: 0, samples: [] });
         return { ok: true, data: welcome };
       }
       switch (command) {
@@ -103,6 +106,13 @@ export class HostRuntime {
       if (timing.pending && now - timing.pending.sentAt >= 2000) {
         timing.pending = null; timing.samples = [];
         this.rooms.clearWebRtcNetworkSample(connection);
+        // Count unanswered probes, not wall time: a suspended host must get a
+        // fresh reply opportunity before it evicts healthy background guests.
+        if (++timing.missed >= 3) {
+          this.disconnect(connection);
+          this.closePeer(connection);
+          continue;
+        }
       }
       if (timing.pending || now < timing.nextAt) continue;
       const nonce = ++this.probeNonce;
@@ -116,7 +126,7 @@ export class HostRuntime {
     if (!timing || !probe || nonce !== probe.nonce) return;
     const elapsed = performance.now() - probe.sentAt;
     if (elapsed < 0 || elapsed >= 2000) return;
-    timing.pending = null;
+    timing.pending = null; timing.missed = 0;
     timing.samples.push(elapsed);
     if (timing.samples.length > RTT_SAMPLE_LIMIT) timing.samples.shift();
     const differences = timing.samples.slice(1).map((value, index) => Math.abs(value - timing.samples[index]!));

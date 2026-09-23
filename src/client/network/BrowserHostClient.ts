@@ -140,9 +140,20 @@ export function createBrowserHostClient():GameClient {
       clear();connection('connected');return ack as Ack<SessionWelcome>;
     }catch(error){clear();connection('connected');return failed(asError(error));}
   };
+  const closeConnection=()=>{
+    if(ownerToken&&roomCode)void signal(`/${roomCode}`,'DELETE',ownerToken).catch(()=>{});
+    clear();connection('disconnected');
+  };
+  const restorePage=(event:PageTransitionEvent)=>{if(event.persisted)connection('connected');};
   return {
-    connect(){connection('connected');},
-    disconnect(){if(ownerToken&&roomCode)void signal(`/${roomCode}`,'DELETE',ownerToken).catch(()=>{});clear();connection('disconnected');},
+    connect(){
+      window.addEventListener('pagehide',closeConnection);window.addEventListener('pageshow',restorePage);
+      connection('connected');
+    },
+    disconnect(){
+      window.removeEventListener('pagehide',closeConnection);window.removeEventListener('pageshow',restorePage);
+      closeConnection();
+    },
     getConnectionState(){return state;},
     subscribe(event,listener){const set=listeners.get(event)??new Set();set.add(listener as (value:never)=>void);listeners.set(event,set);return()=>{set.delete(listener as (value:never)=>void);};},
     async createRoom(name){
@@ -151,7 +162,11 @@ export function createBrowserHostClient():GameClient {
         const browserId = await browserIdentity();
         for(let attempt=0;attempt<5;attempt++){
           const buffered:HostEvent[]=[];let registered=false;
-          runtime=new HostRuntime((id,event)=>{if(id===LOCAL_HOST){if(registered)receive(event);else buffered.push(event);}else {const channel=peers.get(id)?.channel;if(channel){sendPeer(channel,event,event.event==='match:snapshot');if(event.event==='room:kicked')channel.close();}}});
+          runtime=new HostRuntime((id,event)=>{if(id===LOCAL_HOST){if(registered)receive(event);else buffered.push(event);}else {const channel=peers.get(id)?.channel;if(channel){sendPeer(channel,event,event.event==='match:snapshot');if(event.event==='room:kicked')channel.close();}}},id=>{
+            const entry=peers.get(id);if(!entry)return;
+            if(entry.channel)entry.channel.onclose=null;
+            peers.delete(id);entry.peer.close();
+          });
           const created=runtime.create(name, browserId);if(!created.ok)return created;
           roomCode=created.data.roomCode;ownerToken=randomToken();
           try{await signal('','POST',undefined,{roomCode,ownerToken});}
