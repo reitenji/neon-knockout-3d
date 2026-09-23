@@ -57,7 +57,7 @@ function PlayerRow({ player, hostPlayerId }: Readonly<{ player: RoomPlayer; host
     <li className={`player-row ${statusClass}`}>
       <span className="player-row__identity">
         <span className="player-accent" style={{ backgroundColor: ACCENTS[player.accent] }} aria-hidden="true" />
-        <strong>{player.name}</strong>
+        <strong title={player.name}>{player.name}</strong>
         {player.playerId === hostPlayerId ? <span className="host-crown" role="img" aria-label="Oda sahibi">♛</span> : null}
       </span>
       <span className="player-row__chassis">{player.role === 'FIGHTER' ? player.chassis : '—'}{player.botDifficulty ? ` · Bot · ${DIFFICULTY_LABELS[player.botDifficulty]}` : ''}</span>

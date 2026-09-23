@@ -169,7 +169,7 @@ function PlayerRoster({
             <li key={player.playerId} className={local ? 'is-local' : undefined} style={accentStyle}>
               <span className="match-hud__swatch" aria-hidden="true" />
               <span className="match-hud__name">
-                <span>{player.name}{local ? <small>Sen</small> : null}</span>
+                <span><span className="match-hud__player-name" title={player.name}>{player.name}</span>{local ? <small>Sen</small> : null}</span>
               </span>
               <strong className="match-hud__score" aria-label={`${player.name} skoru: ${score} knockout`}>
                 {score}

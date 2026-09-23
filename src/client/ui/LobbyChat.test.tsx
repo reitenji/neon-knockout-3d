@@ -25,3 +25,13 @@ it('keeps failed drafts and clears only the successfully submitted draft', async
   await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Gönder' })));
   expect(input).toHaveValue('');
 });
+
+it('shows sender, local hour and minute, and message in each row with an exact timestamp', () => {
+  const sentAt = new Date(2026, 8, 23, 9, 7, 35).getTime();
+  render(<LobbyChat messages={[{ ...message, sentAt }]} onSend={async () => true} disabled={false} />);
+  const time = screen.getByText('09:07');
+  expect(time.tagName).toBe('TIME');
+  expect(time).toHaveAttribute('datetime', new Date(sentAt).toISOString());
+  expect(time.parentElement).toHaveTextContent('Guest');
+  expect(time.parentElement).toHaveTextContent(message.text);
+});

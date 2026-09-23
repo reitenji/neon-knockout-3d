@@ -61,7 +61,7 @@ export function ResultScreen({ state, onToggleReady, onStart, onReturnToLobby, c
                 key={player.playerId}
                 className={`${player.playerId === room.result?.winnerPlayerId ? 'is-winner ' : ''}${player.resultStatus === 'LEFT' ? 'has-left' : ''}`.trim() || undefined}
               >
-                <td>{index + 1}</td><th scope="row">{player.name}</th><td>{player.stats.knockouts}</td>
+                <td>{index + 1}</td><th scope="row" title={player.name}>{player.name}</th><td>{player.stats.knockouts}</td>
                 <td>{player.stats.falls}</td><td>{player.stats.landedHits}</td><td>{accuracy(player)}%</td>
                 <td>
                   <span className={`result-status result-status--${player.resultStatus.toLowerCase()}`}>
