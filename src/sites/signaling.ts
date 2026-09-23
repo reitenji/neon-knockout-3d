@@ -8,11 +8,13 @@ export interface Statement {
 export interface SignalDatabase { prepare(sql: string): Statement; batch(statements: Statement[]): Promise<unknown>; }
 export interface SignalEnv { DB: SignalDatabase; ASSETS?: { fetch(request: Request): Promise<Response> }; }
 const TTL = 90_000;
+const MAX_ROOMS_PER_SOURCE = 8;
 const codePattern = /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{4}$/;
 const tokenPattern = /^[0-9a-f]{64}$/;
 const json = (value: unknown, status = 200) => Response.json(value, {status,headers:{'Cache-Control':'no-store'}});
 const hash = async (value: string) => [...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value)))].map(b=>b.toString(16).padStart(2,'0')).join('');
 const tokenOf = (request: Request) => request.headers.get('Authorization')?.replace(/^Bearer /,'') ?? '';
+const sourceOf = (request: Request) => request.headers.get('CF-Connecting-IP') ?? 'unknown';
 function validSdp(value: unknown): value is string { return typeof value === 'string' && value.length > 10 && value.length <= 32_000 && value.startsWith('v=0'); }
 async function body(request: Request): Promise<Record<string, unknown>> {
   if (!request.headers.get('content-type')?.includes('application/json')) throw new Error('BODY');
@@ -44,7 +46,8 @@ export async function signalFetch(request: Request, env: SignalEnv): Promise<Res
         db.prepare('DELETE FROM peer_offers WHERE id IN (SELECT id FROM peer_offers WHERE expires_at <= ? LIMIT 100)').bind(now),
         db.prepare('DELETE FROM peer_rooms WHERE code IN (SELECT code FROM peer_rooms WHERE expires_at <= ? LIMIT 100)').bind(now)
       ]);
-      const inserted=await db.prepare('INSERT OR IGNORE INTO peer_rooms(code, owner_hash, expires_at) SELECT ?, ?, ? WHERE (SELECT count(*) FROM peer_rooms) < 1000').bind(p.roomCode,await hash(p.ownerToken),now+TTL).run();
+      const sourceHash=await hash(sourceOf(request));
+      const inserted=await db.prepare('INSERT OR IGNORE INTO peer_rooms(code, owner_hash, source_hash, expires_at) SELECT ?, ?, ?, ? WHERE (SELECT count(*) FROM peer_rooms) < 1000 AND (SELECT count(*) FROM peer_rooms WHERE source_hash = ? AND expires_at > ?) < ?').bind(p.roomCode,await hash(p.ownerToken),sourceHash,now+TTL,sourceHash,now,MAX_ROOMS_PER_SOURCE).run();
       return inserted.meta.changes?json({roomCode:p.roomCode},201):json({error:'ROOM_UNAVAILABLE'},409);
     }
     const code=rest[0];

@@ -28,6 +28,7 @@ type SocketGameplayTransportMode = Exclude<GameplayTransportMode, 'webrtc'>;
 
 export type TransportSession = Readonly<{
   socketId: string;
+  sourceId: string;
   playerId: string;
   roomCode: string;
   inputIngress: MatchInputIngress;
@@ -51,6 +52,7 @@ export type GameplayTransportHubOptions = Readonly<{
   peerFactory: ServerPeerFactory;
   udpPortRange: readonly [number, number];
   now?: () => number;
+  maxPeersPerSource?: number;
 }>;
 
 type RttSample = Readonly<{ value: number; sampledAt: number }>;
@@ -113,6 +115,13 @@ export class GameplayTransportNegotiationCancelledError extends GameplayTranspor
   }
 }
 
+export class GameplayTransportCapacityError extends GameplayTransportExpectedLifecycleError {
+  constructor() {
+    super('WebRTC transport capacity is currently unavailable.');
+    this.name = 'GameplayTransportCapacityError';
+  }
+}
+
 export class GameplayTransportHub {
   private readonly sessionsBySocket = new Map<string, SessionRecord>();
   private readonly sessionsByPlayer = new Map<string, SessionRecord>();
@@ -123,10 +132,18 @@ export class GameplayTransportHub {
   private readonly peerClosures = new WeakMap<ServerPeer, Promise<PeerClosureResult>>();
   private readonly pendingPeerClosures = new Set<Promise<PeerClosureResult>>();
   private readonly now: () => number;
+  private readonly allocatedPeers = new Map<ServerPeer, string>();
+  private readonly maxPeers: number;
+  private readonly maxPeersPerSource: number;
   private stopped = false;
 
   constructor(private readonly options: GameplayTransportHubOptions) {
     this.now = options.now ?? Date.now;
+    const udpPortCount = options.udpPortRange[1] - options.udpPortRange[0] + 1;
+    // Keep one UDP port in reserve so admitted unauthenticated sessions cannot
+    // consume the entire configured range and starve an unrelated session.
+    this.maxPeers = Math.max(0, udpPortCount - 1);
+    this.maxPeersPerSource = Math.max(1, Math.min(options.maxPeersPerSource ?? 8, this.maxPeers));
   }
 
   attachSession(session: TransportSession): void {
@@ -188,8 +205,16 @@ export class GameplayTransportHub {
       throw new GameplayTransportNegotiationCancelledError('WebRTC negotiation was superseded.');
     }
 
+    const sourcePeerCount = [...this.allocatedPeers.values()].filter(
+      sourceId => sourceId === record.session.sourceId
+    ).length;
+    if (this.allocatedPeers.size >= this.maxPeers || sourcePeerCount >= this.maxPeersPerSource) {
+      throw new GameplayTransportCapacityError();
+    }
+
     const generationId = parsed.data.generationId;
     const peer = this.options.peerFactory({ generationId, udpPortRange: this.options.udpPortRange });
+    this.allocatedPeers.set(peer, record.session.sourceId);
     record.generationId = generationId;
     record.peer = peer;
     record.mode = this.fallbackMode(record.session);
@@ -650,6 +675,8 @@ export class GameplayTransportHub {
     this.pendingPeerClosures.add(closure);
     record.pendingPeerClosures.add(closure);
     void closure.then((result) => {
+      // Failed closure cannot prove the underlying UDP resources were released.
+      if (result.ok) this.allocatedPeers.delete(peer);
       this.pendingPeerClosures.delete(closure);
       record.pendingPeerClosures.delete(closure);
       if (!result.ok && record.peerCloseFailure === null) {

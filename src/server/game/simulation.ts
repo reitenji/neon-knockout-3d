@@ -129,8 +129,7 @@ function recentAttacker(
   if (!target.lastAttackerId || target.lastAttackerAtMs === null) return null;
   if (state.nowMs - target.lastAttackerAtMs > 4_000) return null;
   const attacker = state.players[target.lastAttackerId];
-  return attacker && attacker.playerId !== target.playerId && attacker.respawnRemainingMs <= 0 &&
-    !knockedOutPlayerIds.has(attacker.playerId)
+  return attacker && attacker.playerId !== target.playerId && !knockedOutPlayerIds.has(attacker.playerId)
     ? attacker.playerId
     : null;
 }
@@ -384,20 +383,6 @@ export function setPlayerConnected(state: MatchState, playerId: string, connecte
   player.previousQuick = false;
   player.previousHeavy = false;
   player.previousDash = false;
-  player.attack = null;
-  player.comboStep = 0;
-  player.chargeMs = 0;
-  player.charging = false;
-  player.perfectDodgeConsumed = false;
-  player.bufferedQuick = false;
-  player.velocity = { x: 0, y: 0 };
-  player.hitstunRemainingMs = 0;
-  player.dashRemainingMs = 0;
-  player.dashInvulnerabilityRemainingMs = 0;
-  player.protectionRemainingMs = 0;
-  player.resetOverloadOnRespawn = false;
-  player.respawnRemainingMs = connected ? GAME.reconnectWarpMs : 0;
-  if (connected) player.position = chooseSafestSpawn(state, playerId);
   return [];
 }
 

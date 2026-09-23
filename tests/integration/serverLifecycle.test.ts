@@ -506,3 +506,25 @@ describe('GameServer lifecycle', () => {
     }
   });
 });
+
+it('disconnects sockets and releases admission when an idle room expires', async () => {
+  const server = createGameServer({
+    host: '127.0.0.1', port: 0, clientDirectory: false,
+    resourceLimits: { maxConnections: 1, roomIdleTimeoutMs: 300 }
+  });
+  let client: GameClient | null = null;
+  let replacement: GameClient | null = null;
+  try {
+    const address = await server.start();
+    client = await connectClient(address.origin);
+    expectWelcome(await emitAck<SessionWelcome>(client, 'room:create', { name: 'Ada' }));
+    await expect.poll(() => client?.connected, { timeout: 1_000 }).toBe(false);
+    replacement = await connectClient(address.origin);
+    expect(replacement.connected).toBe(true);
+    expect(await (await fetch(`${address.origin}/health`)).json()).toMatchObject({ rooms: 0 });
+  } finally {
+    client?.disconnect();
+    replacement?.disconnect();
+    await server.stop();
+  }
+});
