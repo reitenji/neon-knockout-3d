@@ -895,16 +895,17 @@
 
 .result-frame {
   min-width: 0;
-  width: min(980px, 100%);
+  width: min(1180px, 100%);
   max-height: 100%;
   overflow: auto;
 }
 
 .result-heading {
-  text-align: center;
+  text-align: left;
 }
 
 .result-heading h1 {
+  font-size: clamp(1.3rem, 2.5vw, 2rem);
   overflow-wrap: anywhere;
   margin: var(--space-2) 0 0;
 }
@@ -917,7 +918,7 @@
 
 .result-table th,
 .result-table td {
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-2) 6px;
   border-bottom: 1px solid var(--color-border);
   text-align: left;
 }
@@ -1282,6 +1283,9 @@
     font-size: 0.73rem;
   }
 
+  .result-table thead th:nth-child(2) { width: 23%; }
+  .result-table thead th:nth-child(4), .result-table thead th:nth-child(5) { width: 12.5%; }
+
   .result-table th,
   .result-table td {
     padding-inline: 2px;
@@ -1399,4 +1403,18 @@
 @media (pointer: coarse) and (orientation: landscape) {
   .app-shell--match > .top-bar { display: block; position: fixed; z-index: 15; top: 8px; right: 8px; width: auto; min-height: 0; padding: 0; border: 0; background: transparent; }
   .app-shell--match > .top-bar::after, .app-shell--match > .top-bar > :not(.top-bar__controls), .app-shell--match .top-bar__controls > :not(.room-management) { display: none; }
+}
+
+.result-heading__detail { margin: 8px 0 0; color: var(--color-text-muted); font-size: 0.85rem; }
+.result-content { display: grid; gap: var(--space-6); min-width: 0; align-items: start; }
+.result-standings { min-width: 0; }
+.result-standings h2 { margin: 0 0 var(--space-3); font-size: 1rem; }
+.result-rematch { margin-top: var(--space-6); padding-top: var(--space-4); border-top: 1px solid var(--color-border); font-size: 0.85rem; }
+.result-rematch p { margin: 8px 0 0; color: var(--color-text-muted); }
+.result-content .lobby-chat { margin: 0; min-width: 0; }
+.result-actions { flex-wrap: wrap; justify-content: flex-start; padding-top: var(--space-4); border-top: 1px solid var(--color-border); }
+@media (min-width: 1100px) {
+  .result-content { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
+  .result-content .lobby-chat__message { grid-template-columns: 76px 3.3em minmax(0, 1fr); gap: 8px; }
+  .result-content .lobby-chat__history { height: 210px; }
 }

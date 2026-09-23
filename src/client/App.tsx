@@ -139,6 +139,7 @@ export function App({ store, gameFactory }: AppProps) {
         {state.screen === 'RESULT' ? (
           <ResultScreen
             state={state}
+            onSendChat={store.actions.sendChat}
             onToggleReady={store.actions.setResultReady}
             onStart={store.actions.startMatch}
             onReturnToLobby={store.actions.returnToLobby}

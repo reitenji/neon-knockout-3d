@@ -113,3 +113,15 @@ it('validates chat identity, removes a guest and stops all subsequent peer publi
   expect(host.handle('peer', 'ready', { ready: true })).toMatchObject({ ok: false });
   expect(host.handle('new', 'resume', { roomCode: welcome.roomCode, resumeToken: joined.data.resumeToken })).toMatchObject({ ok: false });
 });
+
+it('enforces browser membership for the Sites owner and peers', () => {
+  const runtime = new HostRuntime(() => {});
+  const created = runtime.create('Owner', 'a'.repeat(32));
+  if (!created.ok) throw new Error('create failed');
+  const join = (connection: string, browserId: string) => runtime.handle(connection, 'join', { roomCode: created.data.roomCode, name: 'Guest', browserId });
+  expect(join('owner-second-tab', 'a'.repeat(32))).toMatchObject({ ok: false, error: { code: 'BROWSER_ALREADY_IN_ROOM' } });
+  expect(join('guest', 'b'.repeat(32))).toMatchObject({ ok: true });
+  expect(join('guest-second-tab', 'b'.repeat(32))).toMatchObject({ ok: false, error: { code: 'BROWSER_ALREADY_IN_ROOM' } });
+  runtime.disconnect('guest');
+  expect(join('guest-reconnected', 'b'.repeat(32))).toMatchObject({ ok: true, data: { resumed: true } });
+});

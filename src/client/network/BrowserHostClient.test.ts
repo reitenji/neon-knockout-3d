@@ -1,4 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest';
+vi.mock('./browserIdentity.js', () => ({ browserIdentity: async () => 'b'.repeat(32) }));
 import { createBrowserHostClient } from './BrowserHostClient.js';
 import { HostRuntime, LOCAL_HOST, type HostCommand } from './browserHost/HostRuntime.js';
 import { createGameStore } from '../state/gameStore.js';

@@ -55,10 +55,53 @@ for (const mobile of [false, true]) {
       expect(await host.page.locator('.result-frame').evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
       await expect(host.page.getByRole('rowheader', { name: hostName })).toHaveAttribute('title', hostName);
       expect((await host.page.getByRole('rowheader', { name: hostName }).boundingBox())!.width).toBeGreaterThan(70);
+      const overlappingHeaders = await host.page.locator('.result-table thead th').evaluateAll(cells => cells.filter(cell => {
+        const range = document.createRange(); range.selectNodeContents(cell);
+        return range.getBoundingClientRect().right > cell.getBoundingClientRect().right - 1;
+      }).map(cell => cell.textContent));
+      expect(overlappingHeaders).toEqual([]);
+      await expect(host.page.getByRole('region', { name: 'Oda sohbeti', exact: true })).toBeVisible();
+      await expect(rows).toHaveCount(2);
+      await guest.page.getByRole('button', { name: 'Tekrar Hazır', exact: true }).click();
+      await guest.page.getByLabel('Mesaj', { exact: true }).fill('İyi oyundu!');
+      await guest.page.getByRole('button', { name: 'Gönder', exact: true }).click();
+      await expect(host.page.locator('.lobby-chat__text').last()).toHaveText('İyi oyundu!');
+      await host.page.getByLabel('Mesaj', { exact: true }).fill('Rövanş oynayalım.');
+      await host.page.getByRole('button', { name: 'Gönder', exact: true }).click();
+      await expect(guest.page.locator('.lobby-chat__text').last()).toHaveText('Rövanş oynayalım.');
+      await expect(guest.page.getByRole('button', { name: 'Tekrar Hazır Değilim', exact: true })).toBeVisible();
       await host.page.screenshot({ animations: 'disabled', path: info.outputPath('result.png') });
+      host.page.once('dialog', dialog => dialog.accept());
       await host.page.getByRole('button', { name: 'Lobiye Dön', exact: true }).click();
       await expect(guest.page.getByRole('region', { name: 'Oda lobisi' })).toBeVisible();
+      await expect(guest.page.locator('.lobby-chat__message')).toHaveCount(4);
       await assertNoUnexpectedErrors(game, host, guest);
     } finally { await host.context.close(); await guest.context.close(); }
   });
 }
+
+
+test('another tab in the same browser cannot join the room under a different name', async ({ browser, game }) => {
+  const host = await openPlayer(browser, game.origin);
+  const guest = await openPlayer(browser, game.origin);
+  try {
+    await host.page.getByLabel('Oyuncu adı').fill('Owner');
+    await host.page.getByRole('button', { name: 'Oda Kur' }).click();
+    const code = await host.page.getByTestId('room-code').innerText();
+    const duplicate = await host.context.newPage();
+    await duplicate.goto(game.origin);
+    await duplicate.getByLabel('Oyuncu adı').fill('Other name');
+    await duplicate.getByLabel('Oda kodu').fill(code);
+    await duplicate.getByRole('button', { name: 'Odaya Katıl' }).click();
+    await expect(duplicate.getByRole('alert')).toContainText('Bu tarayıcı bu odaya zaten katıldı');
+    await expect(host.page.locator('.player-row')).toHaveCount(1);
+    await guest.page.getByLabel('Oyuncu adı').fill('Guest');
+    await guest.page.getByLabel('Oda kodu').fill(code);
+    await guest.page.getByRole('button', { name: 'Odaya Katıl' }).click();
+    await expect(host.page.locator('.player-row')).toHaveCount(2);
+    await host.page.reload();
+    await expect(host.page.getByRole('region', { name: 'Oda lobisi' })).toBeVisible();
+    await expect(host.page.locator('.player-row')).toHaveCount(2);
+    await assertNoUnexpectedErrors(game, host, guest);
+  } finally { await host.context.close(); await guest.context.close(); }
+});
