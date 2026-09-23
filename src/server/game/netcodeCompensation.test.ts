@@ -8,7 +8,8 @@ describe('clampClaimedViewTick', () => {
       claimedViewTick: 50,
       medianRttMs: null,
       jitterMs: null,
-      historyOldestTick: 0
+      historyOldestTick: 0,
+      trustedNetworkTelemetry: true
     })).toBe(96);
   });
 
@@ -18,8 +19,20 @@ describe('clampClaimedViewTick', () => {
       claimedViewTick: 40,
       medianRttMs: 100,
       jitterMs: 20,
-      historyOldestTick: 94
+      historyOldestTick: 94,
+      trustedNetworkTelemetry: true
     })).toBe(94);
+  });
+
+  it('does not expand rollback from peer-controlled network telemetry', () => {
+    expect(clampClaimedViewTick({
+      currentTick: 100,
+      claimedViewTick: 40,
+      medianRttMs: 300,
+      jitterMs: 0,
+      historyOldestTick: 0,
+      trustedNetworkTelemetry: false
+    })).toBe(96);
   });
 
   it('clamps future claims to the current authoritative tick', () => {
@@ -28,7 +41,8 @@ describe('clampClaimedViewTick', () => {
       claimedViewTick: 120,
       medianRttMs: 20,
       jitterMs: 0,
-      historyOldestTick: 90
+      historyOldestTick: 90,
+      trustedNetworkTelemetry: true
     })).toBe(100);
   });
 });

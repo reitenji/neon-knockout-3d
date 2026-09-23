@@ -134,6 +134,53 @@ const idleInput = (seq: number): InputFrame => ({
 });
 
 describe('RoomManager FFA lifecycle', () => {
+  it('bounds aggregate room creation, connections, creation rate, idle lifetime, and code retries', () => {
+    const clock = new FakeClock();
+    const publications: RoomPublication[] = [];
+    const bytes = new DeterministicBytes();
+    const manager = new RoomManager({
+      now: clock.now,
+      randomBytes: bytes.next,
+      publish: (event) => publications.push(event),
+      resourceLimits: {
+        maxRooms: 2,
+        maxConnections: 2,
+        roomCreationsPerWindow: 1,
+        roomCreationWindowMs: 100,
+        roomIdleTimeoutMs: 1_000,
+        roomCodeAttempts: 2
+      }
+    });
+
+    const first = manager.createRoom('first', 'Ada');
+    expectErrorCode(() => manager.createRoom('rate-limited', 'Linus'), 'RATE_LIMITED');
+    clock.advance(101);
+    const second = manager.createRoom('second', 'Linus');
+    expectErrorCode(() => manager.joinRoom('third', first.roomCode, 'Grace'), 'SERVER_CAPACITY');
+    manager.disconnect('second');
+    expectErrorCode(() => manager.createRoom('room-capacity', 'Grace'), 'SERVER_CAPACITY');
+
+    clock.advance(900);
+    manager.advance(0);
+    expect(publications).toContainEqual({ type: 'ROOM_CLOSED', roomCode: first.roomCode });
+    expectErrorCode(() => manager.setReady('first', true), 'PLAYER_NOT_FOUND');
+
+    const collisionBytes = new DeterministicBytes();
+    const collisionManager = new RoomManager({
+      now: clock.now,
+      randomBytes: collisionBytes.next,
+      publish: () => undefined,
+      resourceLimits: { roomCodeAttempts: 2 }
+    });
+    collisionBytes.queue(4, [2, 2, 2, 2]);
+    const occupied = collisionManager.createRoom('occupied', 'Grace');
+    collisionManager.disconnect('occupied');
+    collisionBytes.queue(4, [2, 2, 2, 2], [2, 2, 2, 2]);
+    expectErrorCode(() => collisionManager.createRoom('collision', 'Alan'), 'SERVER_CAPACITY');
+    expect(occupied.roomCode).toBe('CCCC');
+    expect(second.roomCode).not.toBe(first.roomCode);
+  });
+
   it('owns a twelve-tick combat history per match and clears it across result, lobby, and epoch replacement', () => {
     const subject = fixture();
     const { roomCode, players } = readyAndStart(subject);
@@ -176,7 +223,7 @@ describe('RoomManager FFA lifecycle', () => {
     });
   });
 
-  it('clamps admitted view ticks with stale-neutral, fresh-network, history, and future bounds', () => {
+  it('clamps view ticks with neutral, trusted-network, untrusted WebRTC, history, and future bounds', () => {
     const subject = fixture();
     const { roomCode, players } = readyAndStart(subject);
     const hostId = players[0].playerId;
@@ -186,15 +233,21 @@ describe('RoomManager FFA lifecycle', () => {
     subject.manager.advance(17);
     expect(subject.manager.debugRoom(roomCode)?.playerViewTicks?.[hostId]).toBe(176);
 
-    subject.manager.setTransport('c-1', 'webrtc');
-    subject.manager.setWebRtcNetworkSample('c-1', 100, 20, subject.clock.now());
+    subject.manager.setPing('c-1', 90, 'polling', subject.clock.now());
+    subject.manager.setPing('c-1', 110, 'polling', subject.clock.now());
     subject.manager.applyInput('c-1', { ...idleInput(1), viewTick: 0 });
     subject.manager.advance(17);
     expect(subject.manager.debugRoom(roomCode)?.playerViewTicks?.[hostId]).toBe(172);
 
-    subject.manager.applyInput('c-1', { ...idleInput(2), viewTick: 999 });
+    subject.manager.setTransport('c-1', 'webrtc');
+    subject.manager.setWebRtcNetworkSample('c-1', 300, 0, subject.clock.now());
+    subject.manager.applyInput('c-1', { ...idleInput(2), viewTick: 0 });
     subject.manager.advance(17);
-    expect(subject.manager.debugRoom(roomCode)?.playerViewTicks?.[hostId]).toBe(182);
+    expect(subject.manager.debugRoom(roomCode)?.playerViewTicks?.[hostId]).toBe(178);
+
+    subject.manager.applyInput('c-1', { ...idleInput(3), viewTick: 999 });
+    subject.manager.advance(17);
+    expect(subject.manager.debugRoom(roomCode)?.playerViewTicks?.[hostId]).toBe(183);
   });
 
   it('retries room-code collisions and assigns the lowest unused accent with cycling chassis defaults', () => {
@@ -756,7 +809,7 @@ describe('RoomManager FFA lifecycle', () => {
     )).toHaveLength(1);
   });
 
-  it('pauses below two, keeps reservation clocks authoritative, and resumes identity at a stable 180 ms warp anchor', () => {
+  it('pauses below two, keeps reservation clocks authoritative, and resumes identity in place', () => {
     const subject = fixture();
     const { roomCode, players } = readyAndStart(subject);
     advanceCountdown(subject);
@@ -764,6 +817,7 @@ describe('RoomManager FFA lifecycle', () => {
     for (let index = 0; index < 14; index += 1) subject.manager.advance(50);
     const scoreBefore = subject.manager.debugRoom(roomCode)?.scores;
     const statsBefore = subject.snapshot(roomCode).players.find((player) => player.playerId === players[0].playerId)?.stats;
+    const positionBefore = subject.snapshot(roomCode).players.find((player) => player.playerId === players[0].playerId)?.position;
 
     subject.manager.disconnect('c-1');
     const pausedTick = subject.manager.debugRoom(roomCode)?.tick;
@@ -777,19 +831,10 @@ describe('RoomManager FFA lifecycle', () => {
       playerId: players[0].playerId,
       resumed: true
     });
-    const warp = subject.snapshot(roomCode).players.find((player) => player.playerId === players[0].playerId);
-    expect(warp).toMatchObject({ respawnRemainingMs: GAME.reconnectWarpMs, stats: statsBefore });
+    const restored = subject.snapshot(roomCode).players.find((player) => player.playerId === players[0].playerId);
+    expect(restored).toMatchObject({ position: positionBefore, respawnRemainingMs: 0, stats: statsBefore });
     expect(subject.manager.debugRoom(roomCode)?.scores).toEqual(scoreBefore);
     expect(subject.roomState(roomCode).pauseRemainingMs).toBeNull();
-
-    for (let index = 0; index < 4; index += 1) subject.manager.advance(50);
-    const restored = subject.snapshot(roomCode).players.find((player) => player.playerId === players[0].playerId);
-    const respawn = [...subject.publications].reverse().find(
-      (publication) => publication.type === 'MATCH_EVENT' && publication.event.type === 'RESPAWN' &&
-        publication.event.playerId === players[0].playerId
-    );
-    expect(restored?.respawnRemainingMs).toBe(0);
-    expect(respawn?.type === 'MATCH_EVENT' && respawn.event.type === 'RESPAWN' ? respawn.event.position : null).toEqual(warp?.position);
   });
 
   it('waits for the last viable opponent reservation before publishing one no-contest result and resetting the lobby', () => {

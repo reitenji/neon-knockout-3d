@@ -31,17 +31,23 @@ function harness() {
   } as unknown as GameIo;
   const listeners = new Map<string, (...args: unknown[]) => void>();
   const probes: ProbeDelivery[] = [];
+  const probeTimeouts: number[] = [];
   const socket = {
     id: 'host-socket',
     conn: { transport: { name: 'websocket' }, on: () => undefined },
     emit: (event: string, ...args: unknown[]): boolean => {
       if (event === 'network:probe') {
+        const acknowledgeWithTimeout = args[1] as (error: Error | null, payload: { nonce: number }) => void;
         probes.push({
           nonce: (args[0] as { nonce: number }).nonce,
-          acknowledge: args[1] as (payload: { nonce: number }) => void
+          acknowledge: (payload) => acknowledgeWithTimeout(null, payload)
         });
       }
       return true;
+    },
+    timeout: (milliseconds: number) => {
+      probeTimeouts.push(milliseconds);
+      return socket;
     },
     join: async () => undefined,
     leave: async () => undefined,
@@ -76,6 +82,7 @@ function harness() {
     rooms,
     listeners,
     probes,
+    probeTimeouts,
     host: establishedHost,
     setNow(value: number): void { now = value; },
     setTransportMode(mode: GameplayTransportMode): void {
@@ -119,6 +126,7 @@ describe('Socket fallback RTT at match start', () => {
     vi.useFakeTimers();
     const subject = harness();
     expect(subject.probes.map(({ nonce }) => nonce)).toEqual([1]);
+    expect(subject.probeTimeouts).toEqual([2_000]);
     subject.setNow(5);
     subject.probes[0]!.acknowledge({ nonce: 1 });
     const guest = prepareMatch(subject);

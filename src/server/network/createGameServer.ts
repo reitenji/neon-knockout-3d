@@ -16,6 +16,11 @@ import {
 } from '../rooms/roomManager.js';
 import { discoverRuntimeNetworkInfo, type NetworkInterfaces } from '../runtime/lanAddresses.js';
 import { registerSocketHandlers, type GameSocket } from './socketHandlers.js';
+import {
+  DEFAULT_NETWORK_RESOURCE_LIMITS,
+  NetworkAdmission,
+  type NetworkResourceLimits
+} from './NetworkAdmission.js';
 import { GameplayTransportHub } from './gameplayTransport/GameplayTransportHub.js';
 import type {
   ServerPeerFactory,
@@ -58,6 +63,7 @@ export type CreateGameServerOptions = Readonly<{
   clientDirectory?: string | false;
   logger?: Pick<Console, 'error'>;
   networkInterfaces?: () => NetworkInterfaces;
+  resourceLimits?: Partial<NetworkResourceLimits>;
   testGameplayTransport?: Readonly<{
     peerFactory: ServerPeerFactory;
     udpPortRange: readonly [number, number];
@@ -96,6 +102,8 @@ export function createGameServer(options: CreateGameServerOptions = {}): GameSer
   const httpServer: HttpServer = createServer(app);
   const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer);
   const roomCodes = new Set<string>();
+  const resourceLimits = { ...DEFAULT_NETWORK_RESOURCE_LIMITS, ...options.resourceLimits };
+  const admission = new NetworkAdmission(resourceLimits, now, () => roomCodes.size);
   const snapshots = new Map<string, MatchSnapshot>();
   const testEventHistory = options.enableTestHarness ? new Map<string, GameEvent[]>() : null;
   const testInputHistory = options.enableTestHarness ? new Map<string, AcceptedInputRecord[]>() : null;
@@ -122,6 +130,16 @@ export function createGameServer(options: CreateGameServerOptions = {}): GameSer
   let starting: Promise<{ port: number; origin: string }> | null = null;
   let restartAfterStop: Promise<{ port: number; origin: string }> | null = null;
   let stopping: Promise<void> | null = null;
+
+  io.use((socket, next) => {
+    const source = socket.handshake.address;
+    if (!admission.admitConnection(source)) {
+      next(new Error('SERVER_CAPACITY_REACHED'));
+      return;
+    }
+    socket.once('disconnect', () => admission.releaseConnection(source));
+    next();
+  });
 
   const dispatch = (publication: RoomPublication): void => {
     if (publication.type === 'ROOM_STATE') io.to(publication.roomCode).emit('room:state', publication.state);
@@ -229,6 +247,7 @@ export function createGameServer(options: CreateGameServerOptions = {}): GameSer
     now,
     logger,
     transportHub,
+    admitRoomCreation: (socket) => admission.admitRoomCreation(socket.handshake.address),
     onSession: (socket: GameSocket, welcome: SessionWelcome) => {
       playerConnections.set(welcome.playerId, { roomCode: welcome.roomCode, socketId: socket.id });
     },

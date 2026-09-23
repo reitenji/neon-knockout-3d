@@ -6,8 +6,9 @@ export function clampClaimedViewTick(options: Readonly<{
   medianRttMs: number | null;
   jitterMs: number | null;
   historyOldestTick: number | null;
+  trustedNetworkTelemetry: boolean;
 }>): number {
-  const rollbackFrames = options.medianRttMs === null || options.jitterMs === null
+  const rollbackFrames = !options.trustedNetworkTelemetry || options.medianRttMs === null || options.jitterMs === null
     ? NEUTRAL_ADAPTIVE_NETCODE_BUDGET.rollbackFrames
     : calculateAdaptiveNetcodeTarget({
       medianRttMs: options.medianRttMs,
