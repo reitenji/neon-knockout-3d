@@ -249,7 +249,8 @@ export function LobbyScreen({
           </ul> : null}
         </section>
 
-        <LobbyChat messages={room.chatMessages} onSend={onSendChat} disabled={anyPending || state.connectionState !== 'connected'} error={state.errorAction === 'chat' ? state.lastError?.message : undefined} />
+        {room.chatMessages ? <LobbyChat messages={room.chatMessages} onSend={onSendChat} disabled={anyPending || state.connectionState !== 'connected'} error={state.errorAction === 'chat' ? state.lastError?.message : undefined} />
+          : <p className="lobby-chat__empty">Sohbet için oda sahibinin oyunu güncelleyip yeni bir oda açması gerekiyor.</p>}
 
         <div className="lobby-feedback">
           {lobbyError ? <p className="inline-error" role="alert">{lobbyError.message}</p> : null}

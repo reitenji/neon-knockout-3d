@@ -220,3 +220,12 @@ describe('Sites room invitations', () => {
   });
 
 });
+
+
+it('explains unavailable chat when joining a still-open host running the previous Sites version', () => {
+  const legacyRoom = room();
+  delete (legacyRoom as unknown as { chatMessages?: unknown }).chatMessages;
+  renderLobby(state({ room: legacyRoom }));
+  expect(screen.getByText('Sohbet için oda sahibinin oyunu güncelleyip yeni bir oda açması gerekiyor.')).toBeVisible();
+  expect(screen.queryByRole('textbox', { name: 'Mesaj' })).toBeNull();
+});
