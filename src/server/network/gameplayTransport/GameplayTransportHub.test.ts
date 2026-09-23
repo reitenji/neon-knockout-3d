@@ -441,6 +441,29 @@ describe('GameplayTransportHub', () => {
     expect(factory.peers).toHaveLength(1);
   });
 
+  it('retains admission capacity until a detached peer actually closes', async () => {
+    const factory = new FakePeerFactory();
+    const hub = new GameplayTransportHub({ peerFactory: factory.create, udpPortRange: [53100, 53101] });
+    hubs.push(hub);
+    hub.attachSession(session().session);
+    hub.attachSession(session({ socketId: 's2', playerId: 'p2' }).session);
+    await hub.negotiate('s1', { generationId: FIRST_GENERATION, offer: { type: 'offer', sdp: 'first' } });
+    const closing = deferred<void>();
+    factory.peers[0]!.close = () => closing.promise;
+    const detached = hub.detachSession('s1');
+    try {
+      await expect(hub.negotiate('s2', {
+        generationId: SECOND_GENERATION, offer: { type: 'offer', sdp: 'second' }
+      })).rejects.toThrow(/capacity/i);
+    } finally {
+      closing.resolve();
+      await detached;
+    }
+    await expect(hub.negotiate('s2', {
+      generationId: SECOND_GENERATION, offer: { type: 'offer', sdp: 'second' }
+    })).resolves.toMatchObject({ generationId: SECOND_GENERATION });
+  });
+
   it('keeps repeated activation of the active current generation idempotently active', async () => {
     const { hub, factory } = createSubject();
     const first = session();

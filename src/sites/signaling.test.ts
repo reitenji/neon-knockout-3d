@@ -1,3 +1,5 @@
+import { DatabaseSync } from 'node:sqlite';
+import { readFileSync } from 'node:fs';
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { sqliteSignalStore } from '../../scripts/lib/sqlite-signal-store.js';
@@ -50,4 +52,15 @@ describe('Sites connection mailbox',()=>{
     expect((await api('/ABCD','GET',owner)).status).toBe(404);
     expect((await api('','POST',undefined,{roomCode:'ABCD',ownerToken:stranger})).status).toBe(201);
   });
+});
+
+it('preserves unexpired signaling leases when adding source quotas', () => {
+  const sqlite = new DatabaseSync(':memory:');
+  try {
+    sqlite.exec(readFileSync('drizzle/0000_tired_iron_man.sql', 'utf8'));
+    sqlite.prepare('INSERT INTO peer_rooms(code, owner_hash, expires_at) VALUES (?, ?, ?)')
+      .run('ABCD', 'owner', Date.now() + 90_000);
+    sqlite.exec(readFileSync('drizzle/0001_polite_ma_gnuci.sql', 'utf8'));
+    expect(sqlite.prepare('SELECT code FROM peer_rooms').get()?.code).toBe('ABCD');
+  } finally { sqlite.close(); }
 });

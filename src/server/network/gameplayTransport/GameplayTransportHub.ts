@@ -132,6 +132,7 @@ export class GameplayTransportHub {
   private readonly peerClosures = new WeakMap<ServerPeer, Promise<PeerClosureResult>>();
   private readonly pendingPeerClosures = new Set<Promise<PeerClosureResult>>();
   private readonly now: () => number;
+  private readonly allocatedPeers = new Map<ServerPeer, string>();
   private readonly maxPeers: number;
   private readonly maxPeersPerSource: number;
   private stopped = false;
@@ -141,7 +142,7 @@ export class GameplayTransportHub {
     const udpPortCount = options.udpPortRange[1] - options.udpPortRange[0] + 1;
     // Keep one UDP port in reserve so admitted unauthenticated sessions cannot
     // consume the entire configured range and starve an unrelated session.
-    this.maxPeers = Math.max(1, udpPortCount - 1);
+    this.maxPeers = Math.max(0, udpPortCount - 1);
     this.maxPeersPerSource = Math.max(1, Math.min(options.maxPeersPerSource ?? 8, this.maxPeers));
   }
 
@@ -204,16 +205,16 @@ export class GameplayTransportHub {
       throw new GameplayTransportNegotiationCancelledError('WebRTC negotiation was superseded.');
     }
 
-    const recordsWithPeers = [...this.sessionsBySocket.values()].filter((candidate) => candidate.peer !== null);
-    const sourcePeerCount = recordsWithPeers.filter(
-      (candidate) => candidate.session.sourceId === record.session.sourceId
+    const sourcePeerCount = [...this.allocatedPeers.values()].filter(
+      sourceId => sourceId === record.session.sourceId
     ).length;
-    if (recordsWithPeers.length >= this.maxPeers || sourcePeerCount >= this.maxPeersPerSource) {
+    if (this.allocatedPeers.size >= this.maxPeers || sourcePeerCount >= this.maxPeersPerSource) {
       throw new GameplayTransportCapacityError();
     }
 
     const generationId = parsed.data.generationId;
     const peer = this.options.peerFactory({ generationId, udpPortRange: this.options.udpPortRange });
+    this.allocatedPeers.set(peer, record.session.sourceId);
     record.generationId = generationId;
     record.peer = peer;
     record.mode = this.fallbackMode(record.session);
@@ -674,6 +675,8 @@ export class GameplayTransportHub {
     this.pendingPeerClosures.add(closure);
     record.pendingPeerClosures.add(closure);
     void closure.then((result) => {
+      // Failed closure cannot prove the underlying UDP resources were released.
+      if (result.ok) this.allocatedPeers.delete(peer);
       this.pendingPeerClosures.delete(closure);
       record.pendingPeerClosures.delete(closure);
       if (!result.ok && record.peerCloseFailure === null) {

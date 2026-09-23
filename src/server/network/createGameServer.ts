@@ -11,6 +11,7 @@ import type { ClientToServerEvents, ServerToClientEvents } from '../../shared/pr
 import {
   RoomManager,
   type RoomManagerTestHarness,
+  type RoomManagerResourceLimits,
   type RoomPublication,
   type TestCombatScript
 } from '../rooms/roomManager.js';
@@ -63,7 +64,7 @@ export type CreateGameServerOptions = Readonly<{
   clientDirectory?: string | false;
   logger?: Pick<Console, 'error'>;
   networkInterfaces?: () => NetworkInterfaces;
-  resourceLimits?: Partial<NetworkResourceLimits>;
+  resourceLimits?: Partial<NetworkResourceLimits & RoomManagerResourceLimits>;
   testGameplayTransport?: Readonly<{
     peerFactory: ServerPeerFactory;
     udpPortRange: readonly [number, number];
@@ -143,6 +144,13 @@ export function createGameServer(options: CreateGameServerOptions = {}): GameSer
 
   const dispatch = (publication: RoomPublication): void => {
     if (publication.type === 'ROOM_STATE') io.to(publication.roomCode).emit('room:state', publication.state);
+    if (publication.type === 'ROOM_CLOSED' && publication.reason === 'IDLE') {
+      io.to(publication.roomCode).emit('server:error', {
+        code: 'ROOM_NOT_FOUND', message: 'Oda kapandı.', recoverable: true
+      });
+      // Disconnect handlers release admission, timers and Socket.IO membership.
+      io.in(publication.roomCode).disconnectSockets(true);
+    }
     if (
       publication.type === 'MATCH_STARTED'
       || publication.type === 'MATCH_SNAPSHOT'
@@ -205,6 +213,7 @@ export function createGameServer(options: CreateGameServerOptions = {}): GameSer
     now,
     randomBytes,
     publish,
+    resourceLimits,
     ...(options.enableTestHarness
       ? { bindTestHarness: (harness: RoomManagerTestHarness): void => { roomTestHarness = harness; } }
       : {})

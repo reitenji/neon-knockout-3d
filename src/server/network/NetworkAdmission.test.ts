@@ -22,6 +22,20 @@ describe('NetworkAdmission', () => {
     expect(admission.admitConnection('c')).toBe(true);
   });
 
+  it('bounds retained source quotas and reclaims them after their rate window', () => {
+    let now = 0;
+    const admission = new NetworkAdmission(limits, () => now, () => 0);
+    for (const source of ['a', 'b', 'c']) {
+      expect(admission.admitConnection(source)).toBe(true);
+      expect(admission.admitRoomCreation(source)).toBe(true);
+      admission.releaseConnection(source);
+    }
+    expect(admission.admitConnection('d')).toBe(false);
+    now = 60_001;
+    expect(admission.admitConnection('d')).toBe(true);
+    expect(admission.admitRoomCreation('d')).toBe(true);
+  });
+
   it('limits room allocation per source and across the server', () => {
     let now = 1_000;
     let rooms = 0;

@@ -1,6 +1,6 @@
 import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
 export const peerRooms = sqliteTable('peer_rooms', {
-  code: text('code').primaryKey(), ownerHash: text('owner_hash').notNull(), sourceHash: text('source_hash').notNull(), expiresAt: integer('expires_at').notNull()
+  code: text('code').primaryKey(), ownerHash: text('owner_hash').notNull(), sourceHash: text('source_hash').notNull().default(''), expiresAt: integer('expires_at').notNull()
 },table=>[index('peer_rooms_expiry').on(table.expiresAt),index('peer_rooms_source_expiry').on(table.sourceHash,table.expiresAt)]);
 export const peerOffers = sqliteTable('peer_offers', {
   id:text('id').primaryKey(),roomCode:text('room_code').notNull().references(()=>peerRooms.code,{onDelete:'cascade'}),

@@ -71,7 +71,7 @@ export type RoomPublication =
   | ({ type: 'MATCH_STARTED'; roomCode: string } & MatchStartedPublication)
   | ({ type: 'MATCH_SNAPSHOT'; roomCode: string } & MatchSnapshotPublication)
   | ({ type: 'MATCH_EVENT'; roomCode: string } & MatchEventPublication)
-  | { type: 'ROOM_CLOSED'; roomCode: string };
+  | { type: 'ROOM_CLOSED'; roomCode: string; reason?: 'IDLE' };
 
 type RoomPlayer = {
   role: PlayerRole;
@@ -86,7 +86,6 @@ type RoomPlayer = {
   resumeToken: Uint8Array;
   order: number;
   expiresAt: number | null;
-  reconnectAnchor: Vec2 | null;
 };
 
 type ResultPlayerRecord = {
@@ -267,7 +266,6 @@ export class RoomManager {
       resumeToken,
       order: 0,
       expiresAt: null,
-      reconnectAnchor: null
     };
     const room: Room = {
       roomCode,
@@ -297,7 +295,6 @@ export class RoomManager {
   joinRoom(connectionId: string, roomCode: string, name: string, role: PlayerRole = 'FIGHTER'): SessionWelcome {
     this.assertConnectionAvailable(connectionId);
     const room = this.requireRoom(roomCode);
-    room.lastActivityAt = this.deps.now();
     this.assertRole(role);
     if (role === 'FIGHTER' && (room.phase === 'COUNTDOWN' || room.phase === 'MATCH')) {
       throw new DomainError('MATCH_IN_PROGRESS', 'Maç devam ederken yeni oyuncu katılamaz.', true);
@@ -307,6 +304,7 @@ export class RoomManager {
     const playerId = bytesToHex(this.deps.randomBytes(16));
     const resumeToken = this.deps.randomBytes(32);
     const order = room.nextPlayerOrder++;
+    room.lastActivityAt = this.deps.now();
     room.players.set(playerId, {
       playerId,
       role,
@@ -320,7 +318,6 @@ export class RoomManager {
       resumeToken,
       order,
       expiresAt: null,
-      reconnectAnchor: null
     });
     room.network.set(playerId, createNetworkRuntime());
     this.connections.set(connectionId, { roomCode: room.roomCode, playerId });
@@ -336,7 +333,6 @@ export class RoomManager {
   ): SessionWelcome {
     this.assertConnectionAvailable(connectionId);
     const room = this.requireRoom(roomCode);
-    room.lastActivityAt = this.deps.now();
     const token = this.parseResumeToken(resumeToken);
     const now = this.deps.now();
     const player = [...room.players.values()].find((candidate) =>
@@ -345,6 +341,7 @@ export class RoomManager {
     if (!player) {
       throw new DomainError('INVALID_RESUME_TOKEN', 'Yeniden bağlanma anahtarı geçersiz veya süresi dolmuş.', true);
     }
+    room.lastActivityAt = now;
     const network = room.network.get(player.playerId) ?? createNetworkRuntime(transport);
     clearNetworkSamples(network);
     network.transport = transport;
@@ -355,7 +352,6 @@ export class RoomManager {
     if (!room.players.get(room.hostPlayerId)?.connected) this.migrateHost(room);
     if (room.match?.players[player.playerId] && (room.phase === 'COUNTDOWN' || room.phase === 'MATCH')) {
       this.publishMatchEvents(room, setPlayerConnected(room.match, player.playerId, true));
-      player.reconnectAnchor = { ...room.match.players[player.playerId].position };
       this.reconcilePopulation(room);
       this.publishSnapshot(room);
     }
@@ -397,7 +393,7 @@ export class RoomManager {
     room.players.set(playerId, {
       playerId, name: `Bot ${order + 1}`, chassis, botDifficulty: difficulty, role: 'FIGHTER',
       accent: this.lowestUnusedAccent(room), ready: true, connected: true, stats: emptyStats(),
-      resumeToken: new Uint8Array(), order, expiresAt: null, reconnectAnchor: null
+      resumeToken: new Uint8Array(), order, expiresAt: null
     });
     this.publishRoom(room);
   }
@@ -514,7 +510,6 @@ export class RoomManager {
     for (const candidate of room.players.values()) {
       candidate.ready = candidate.botDifficulty !== null;
       candidate.stats = emptyStats();
-      candidate.reconnectAnchor = null;
     }
     if (room.match) clearPulses(room.match);
     room.combatHistory?.clear();
@@ -587,7 +582,7 @@ export class RoomManager {
     source: Exclude<PlayerNetworkTransport, 'webrtc'>,
     sampledAtMs: number
   ): void {
-    const { room, player } = this.requireConnectedPlayer(connectionId);
+    const { room, player } = this.requireConnectedPlayer(connectionId, false);
     if (!room.match || (room.phase !== 'COUNTDOWN' && room.phase !== 'MATCH')) return;
     const runtime = room.network.get(player.playerId) ?? createNetworkRuntime();
     if (runtime.transport !== source || !Number.isFinite(sampledAtMs)) return;
@@ -603,7 +598,7 @@ export class RoomManager {
   }
 
   setWebRtcNetworkSample(connectionId: string, medianMs: number, jitterMs: number, sampledAtMs: number): void {
-    const { room, player } = this.requireConnectedPlayer(connectionId);
+    const { room, player } = this.requireConnectedPlayer(connectionId, false);
     if (!room.match || (room.phase !== 'COUNTDOWN' && room.phase !== 'MATCH')) return;
     const runtime = room.network.get(player.playerId) ?? createNetworkRuntime();
     if (runtime.transport !== 'webrtc' || !Number.isFinite(sampledAtMs)) return;
@@ -618,7 +613,7 @@ export class RoomManager {
   }
 
   clearWebRtcNetworkSample(connectionId: string): void {
-    const { room, player } = this.requireConnectedPlayer(connectionId);
+    const { room, player } = this.requireConnectedPlayer(connectionId, false);
     const runtime = room.network.get(player.playerId) ?? createNetworkRuntime();
     if (runtime.transport !== 'webrtc') return;
     clearNetworkSamples(runtime);
@@ -626,7 +621,7 @@ export class RoomManager {
   }
 
   setTransport(connectionId: string, transport: PlayerNetworkTransport): void {
-    const { room, player } = this.requireConnectedPlayer(connectionId);
+    const { room, player } = this.requireConnectedPlayer(connectionId, false);
     const runtime = room.network.get(player.playerId) ?? createNetworkRuntime(transport);
     if (runtime.transport !== transport) clearNetworkSamples(runtime);
     runtime.transport = transport;
@@ -634,7 +629,7 @@ export class RoomManager {
   }
 
   clearPing(connectionId: string): void {
-    const { room, player } = this.requireConnectedPlayer(connectionId);
+    const { room, player } = this.requireConnectedPlayer(connectionId, false);
     const runtime = room.network.get(player.playerId) ?? createNetworkRuntime();
     clearNetworkSamples(runtime);
     room.network.set(player.playerId, runtime);
@@ -740,7 +735,6 @@ export class RoomManager {
     player.connected = false;
     player.ready = false;
     player.expiresAt = this.deps.now() + GAME.reconnectGraceMs;
-    player.reconnectAnchor = null;
     room.inputs.delete(player.playerId);
     if (room.match?.players[player.playerId]) {
       this.publishMatchEvents(room, setPlayerConnected(room.match, player.playerId, false));
@@ -805,8 +799,7 @@ export class RoomManager {
           const observation = snapshotMatch(room.match);
           for (const [playerId, bot] of room.bots) room.inputs.set(playerId, bot.nextInput(observation));
         }
-        let events = [...stepMatch(room.match, room.inputs, stepDuration, room.combatHistory ?? undefined)];
-        events = this.finalizeReconnectAnchors(room, events);
+        const events = [...stepMatch(room.match, room.inputs, stepDuration, room.combatHistory ?? undefined)];
         room.combatHistory?.capture(room.match);
         room.accumulatorMs -= SIMULATION_STEP_MS;
         room.snapshotAccumulatorMs += SIMULATION_STEP_MS;
@@ -856,7 +849,7 @@ export class RoomManager {
     for (const [connectionId, session] of this.connections) {
       if (session.roomCode === room.roomCode) this.connections.delete(connectionId);
     }
-    this.deps.publish({ type: 'ROOM_CLOSED', roomCode: room.roomCode });
+    this.deps.publish({ type: 'ROOM_CLOSED', roomCode: room.roomCode, reason: 'IDLE' });
   }
 
   private lowestUnusedAccent(room: Room): PlayerAccent {
@@ -924,22 +917,6 @@ export class RoomManager {
     this.publishRoom(room);
   }
 
-  private finalizeReconnectAnchors(room: Room, events: GameEvent[]): GameEvent[] {
-    if (!room.match) return events;
-    const replacements = new Map<string, Vec2>();
-    for (const player of room.players.values()) {
-      const matchPlayer = room.match.players[player.playerId];
-      if (!player.reconnectAnchor || !matchPlayer || matchPlayer.respawnRemainingMs > 0) continue;
-      matchPlayer.position = { ...player.reconnectAnchor };
-      replacements.set(player.playerId, { ...player.reconnectAnchor });
-      player.reconnectAnchor = null;
-    }
-    if (replacements.size === 0) return events;
-    return events.map((event) => event.type === 'RESPAWN' && replacements.has(event.playerId)
-      ? { ...event, position: { ...replacements.get(event.playerId)! } }
-      : event);
-  }
-
   private publishMatchEvents(room: Room, events: readonly GameEvent[]): void {
     for (const event of events) {
       this.deps.publish({ type: 'MATCH_EVENT', roomCode: room.roomCode, matchEpoch: room.matchEpoch, event });
@@ -972,7 +949,6 @@ export class RoomManager {
       const matchPlayer = room.match.players[player.playerId];
       if (matchPlayer) player.stats = { ...matchPlayer.stats };
       player.ready = player.botDifficulty !== null;
-      player.reconnectAnchor = null;
       this.rememberResultPlayer(room, player);
     }
     this.publishRoom(room);
@@ -992,7 +968,6 @@ export class RoomManager {
     for (const player of room.players.values()) {
       player.ready = player.botDifficulty !== null;
       player.stats = emptyStats();
-      player.reconnectAnchor = null;
     }
   }
 
@@ -1094,8 +1069,7 @@ export class RoomManager {
 
     for (const step of script.steps) {
       for (const entry of step.inputs ?? []) room.inputs.set(entry.playerId, entry.input);
-      let events = [...stepMatch(room.match, room.inputs, step.elapsedMs, room.combatHistory ?? undefined)];
-      events = this.finalizeReconnectAnchors(room, events);
+      const events = [...stepMatch(room.match, room.inputs, step.elapsedMs, room.combatHistory ?? undefined)];
       room.combatHistory?.capture(room.match);
       this.publishMatchEvents(room, events);
       this.publishSnapshot(room);
@@ -1172,14 +1146,14 @@ export class RoomManager {
     return Uint8Array.from(value.match(/.{2}/g)!, byte => Number.parseInt(byte, 16));
   }
 
-  private requireConnectedPlayer(connectionId: string): { room: Room; player: RoomPlayer } {
+  private requireConnectedPlayer(connectionId: string, recordActivity = true): { room: Room; player: RoomPlayer } {
     const session = this.connections.get(connectionId);
     const room = session ? this.rooms.get(session.roomCode) : undefined;
     const player = session ? room?.players.get(session.playerId) : undefined;
     if (!room || !player || !player.connected) {
       throw new DomainError('PLAYER_NOT_FOUND', 'Oyuncu oturumu bulunamadı.', true);
     }
-    room.lastActivityAt = this.deps.now();
+    if (recordActivity) room.lastActivityAt = this.deps.now();
     return { room, player };
   }
 

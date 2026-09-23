@@ -30,7 +30,9 @@ export class NetworkAdmission {
 
   admitConnection(source: string): boolean {
     if (this.connections >= this.limits.maxConnections) return false;
+    this.pruneExpiredSources();
     const existing = this.sources.get(source);
+    if (!existing && this.sources.size >= this.limits.maxConnections) return false;
     if ((existing?.connections ?? 0) >= this.limits.maxConnectionsPerSource) return false;
     const state = existing ?? this.sourceState(source);
     this.connections++;
@@ -50,12 +52,22 @@ export class NetworkAdmission {
 
   admitRoomCreation(source: string): boolean {
     if (this.liveRoomCount() >= this.limits.maxRooms) return false;
+    this.pruneExpiredSources();
+    if (!this.sources.has(source) && this.sources.size >= this.limits.maxConnections) return false;
     const state = this.sourceState(source);
     const windowStart = this.now() - 60_000;
     state.roomCreationTimestamps = state.roomCreationTimestamps.filter((timestamp) => timestamp > windowStart);
     if (state.roomCreationTimestamps.length >= this.limits.roomCreationsPerMinutePerSource) return false;
     state.roomCreationTimestamps.push(this.now());
     return true;
+  }
+
+  private pruneExpiredSources(): void {
+    const windowStart = this.now() - 60_000;
+    for (const [source, state] of this.sources) {
+      state.roomCreationTimestamps = state.roomCreationTimestamps.filter(timestamp => timestamp > windowStart);
+      this.removeSourceIfEmpty(source, state);
+    }
   }
 
   private sourceState(source: string): SourceState {

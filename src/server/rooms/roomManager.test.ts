@@ -162,7 +162,7 @@ describe('RoomManager FFA lifecycle', () => {
 
     clock.advance(900);
     manager.advance(0);
-    expect(publications).toContainEqual({ type: 'ROOM_CLOSED', roomCode: first.roomCode });
+    expect(publications).toContainEqual({ type: 'ROOM_CLOSED', roomCode: first.roomCode, reason: 'IDLE' });
     expectErrorCode(() => manager.setReady('first', true), 'PLAYER_NOT_FOUND');
 
     const collisionBytes = new DeterministicBytes();
@@ -179,6 +179,35 @@ describe('RoomManager FFA lifecycle', () => {
     expectErrorCode(() => collisionManager.createRoom('collision', 'Alan'), 'SERVER_CAPACITY');
     expect(occupied.roomCode).toBe('CCCC');
     expect(second.roomCode).not.toBe(first.roomCode);
+  });
+
+  it('refreshes the idle deadline after a successful join near expiry', () => {
+    const subject = fixture();
+    const host = subject.manager.createRoom('host', 'Ada');
+    subject.clock.advance(30 * 60_000 - 100);
+    subject.manager.joinRoom('guest', host.roomCode, 'Linus');
+    subject.clock.advance(100);
+    subject.manager.advance(0);
+    expect(subject.manager.debugRoom(host.roomCode)?.connectedCount).toBe(2);
+  });
+
+  it('expires idle rooms despite telemetry and invalid resume attempts', () => {
+    const clock = new FakeClock();
+    const publications: RoomPublication[] = [];
+    const bytes = new DeterministicBytes();
+    const manager = new RoomManager({
+      now: clock.now, randomBytes: bytes.next, publish: event => publications.push(event),
+      resourceLimits: { roomIdleTimeoutMs: 1_000 }
+    });
+    const room = manager.createRoom('host', 'Ada');
+    clock.advance(900);
+    manager.setPing('host', 10, 'polling', clock.now());
+    manager.setTransport('host', 'webrtc');
+    manager.setWebRtcNetworkSample('host', 10, 0, clock.now());
+    expectErrorCode(() => manager.resume('intruder', room.roomCode, '0'.repeat(64)), 'INVALID_RESUME_TOKEN');
+    clock.advance(100);
+    manager.advance(0);
+    expect(publications).toContainEqual({ type: 'ROOM_CLOSED', roomCode: room.roomCode, reason: 'IDLE' });
   });
 
   it('owns a twelve-tick combat history per match and clears it across result, lobby, and epoch replacement', () => {
@@ -807,6 +836,21 @@ describe('RoomManager FFA lifecycle', () => {
     expect(subject.publications.filter(
       (publication) => publication.type === 'MATCH_EVENT' && publication.event.type === 'KNOCKOUT'
     )).toHaveLength(1);
+  });
+
+  it('keeps the safe respawn after an imminent knockout across reconnect', () => {
+    const subject = fixture();
+    const { roomCode, players } = readyAndStart(subject);
+    advanceCountdown(subject);
+    const target = players[1]!;
+    subject.harness.placePlayer(roomCode, target.playerId, { x: 640, y: 0 }, { x: 1, y: 0 });
+    subject.manager.disconnect('c-2');
+    subject.manager.resume('resumed', roomCode, target.resumeToken);
+    for (let index = 0; index < 14; index += 1) subject.manager.advance(50);
+    const recovered = subject.snapshot(roomCode).players.find(player => player.playerId === target.playerId)!;
+    expect(recovered.respawnRemainingMs).toBe(0);
+    expect(recovered.stats.falls).toBe(1);
+    expect(recovered.position.y).toBeGreaterThan(0);
   });
 
   it('pauses below two, keeps reservation clocks authoritative, and resumes identity in place', () => {
