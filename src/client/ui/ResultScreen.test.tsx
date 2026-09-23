@@ -55,6 +55,7 @@ function resultState(overrides: Partial<ClientState> = {}): ClientState {
 function renderResult(state = resultState(), overrides: Partial<Parameters<typeof ResultScreen>[0]> = {}) {
   const props: Parameters<typeof ResultScreen>[0] = {
     state,
+    onSendChat: vi.fn(async () => true),
     onToggleReady: vi.fn(async () => undefined),
     onStart: vi.fn(async () => undefined),
     onReturnToLobby: vi.fn(async () => undefined),

@@ -1,3 +1,4 @@
+import { browserIdentity } from './browserIdentity.js';
 import { io, type Socket } from 'socket.io-client';
 import type { Ack, BotDifficulty, PlayerRole, Chassis, GameEvent, InputFrame, MatchSnapshot, RoomState, ServerError, SessionWelcome } from '../../shared/model.js';
 import type { RoomSettings } from '../../shared/roomSettings.js';
@@ -242,11 +243,13 @@ export function createSocketGameClient(options: SocketGameClientOptions = {}): G
       listeners[event].add(listener);
       return () => listeners[event].delete(listener);
     },
-    createRoom(name: string): Promise<Ack<SessionWelcome>> {
-      return withAckTimeout((acknowledge) => socket.emit('room:create', { name }, acknowledge));
+    async createRoom(name: string): Promise<Ack<SessionWelcome>> {
+      const browserId = await browserIdentity();
+      return withAckTimeout((acknowledge) => socket.emit('room:create', { name, browserId }, acknowledge));
     },
-    joinRoom(name: string, roomCode: string, role?: PlayerRole): Promise<Ack<SessionWelcome>> {
-      return withAckTimeout((acknowledge) => socket.emit('room:join', { name, roomCode, ...(role ? { role } : {}) }, acknowledge));
+    async joinRoom(name: string, roomCode: string, role?: PlayerRole): Promise<Ack<SessionWelcome>> {
+      const browserId = await browserIdentity();
+      return withAckTimeout((acknowledge) => socket.emit('room:join', { name, roomCode, browserId, ...(role ? { role } : {}) }, acknowledge));
     },
     resumeSession(roomCode: string, resumeToken: string): Promise<Ack<SessionWelcome>> {
       return withAckTimeout((acknowledge) => socket.emit('session:resume', { roomCode, resumeToken }, acknowledge));

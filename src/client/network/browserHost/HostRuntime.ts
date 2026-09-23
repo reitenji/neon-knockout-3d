@@ -39,12 +39,12 @@ export class HostRuntime {
     this.rooms = new RoomManager({ now: () => Date.now(), randomBytes: size => crypto.getRandomValues(new Uint8Array(size)), publish: event => this.publish(event) });
   }
 
-  create(name: string): Ack<SessionWelcome> {
+  create(name: string, browserId?: string): Ack<SessionWelcome> {
     try {
       if (this.code) return failure('ALREADY_IN_ROOM', 'Zaten bir odadasın.');
-      const parsed = protocol.roomCreateSchema.safeParse({ name });
+      const parsed = protocol.roomCreateSchema.safeParse({ name, browserId });
       if (!parsed.success) return failure('INVALID_PAYLOAD', 'Oyuncu adı geçersiz.');
-      const welcome = this.rooms.createRoom(LOCAL_HOST, parsed.data.name);
+      const welcome = this.rooms.createRoom(LOCAL_HOST, parsed.data.name, parsed.data.browserId);
       this.code = welcome.roomCode; this.members.add(LOCAL_HOST); this.sync(LOCAL_HOST);
       this.rooms.setTransport(LOCAL_HOST, 'webrtc');
       return { ok: true, data: welcome };
@@ -60,7 +60,7 @@ export class HostRuntime {
       if (command === 'join' || command === 'resume') {
         if (connection === LOCAL_HOST) return failure('ALREADY_IN_ROOM', 'Zaten bir odadasın.');
         const welcome = command === 'join'
-          ? (() => { const p = protocol.roomJoinSchema.parse(payload); return this.rooms.joinRoom(connection, p.roomCode, p.name, p.role); })()
+          ? (() => { const p = protocol.roomJoinSchema.parse(payload); return this.rooms.joinRoom(connection, p.roomCode, p.name, p.role, p.browserId); })()
           : (() => { const p = protocol.sessionResumeSchema.parse(payload); return this.rooms.resume(connection, p.roomCode, p.resumeToken, 'webrtc'); })();
         this.members.add(connection); this.rooms.setTransport(connection, 'webrtc'); this.sync(connection);
         this.timings.set(connection, { pending: null, nextAt: 0, samples: [] });

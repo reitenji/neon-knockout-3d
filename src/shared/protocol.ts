@@ -44,8 +44,9 @@ const roomCodeSchema = z.string().transform((value, context) => {
   }
 });
 
-export const roomCreateSchema = z.object({ name: z.string() }).strict();
-export const roomJoinSchema = z.object({ name: z.string(), roomCode: roomCodeSchema, role: roleSchema.default('FIGHTER') }).strict();
+const browserIdSchema = z.string().regex(/^[a-f0-9]{32}$/).optional();
+export const roomCreateSchema = z.object({ name: z.string(), browserId: browserIdSchema }).strict();
+export const roomJoinSchema = z.object({ name: z.string(), roomCode: roomCodeSchema, role: roleSchema.default('FIGHTER'), browserId: browserIdSchema }).strict();
 export const lobbyChatSchema = z.object({ text: z.string().trim().min(1).max(240) }).strict();
 export const roomKickSchema = z.object({ playerId: z.string().min(1) }).strict();
 export const roomLeaveSchema = emptyPayloadSchema;

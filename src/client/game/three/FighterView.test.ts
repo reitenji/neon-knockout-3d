@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import { OrthographicCamera, Scene } from 'three';
+import { Mesh, MeshBasicMaterial, OrthographicCamera, Scene } from 'three';
 import { createMatchState } from '../../../server/game/state.js';
 import { snapshotMatch } from '../../../server/game/simulation.js';
 import { DEFAULT_ROOM_SETTINGS } from '../../../shared/roomSettings.js';
@@ -95,4 +95,25 @@ it('keeps critical damage highlighting static with reduced motion', () => {
   apply(); const glow = view.model.glow.emissiveIntensity;
   now = 250; apply(); expect(view.model.glow.emissiveIntensity).toBe(glow);
   view.destroy();
+});
+
+it('marks only the controlled fighter with a red ring that follows movement and respawn', () => {
+  const players = snapshotMatch(createMatchState([
+    { playerId: 'a', name: 'A', chassis: 'RIFT', accent: 0 },
+    { playerId: 'b', name: 'B', chassis: 'RIFT', accent: 1 }
+  ], 0, DEFAULT_ROOM_SETTINGS)).players;
+  const scene = new Scene();
+  const views = players.map((p, i) => createFighterView(scene, new OrthographicCamera(), document.createElement('div'), p, i === 0, true));
+  const rings = scene.children.filter(o => o.name === 'local-player-ring');
+  expect(rings).toHaveLength(1);
+  const ring = rings[0] as Mesh<never, MeshBasicMaterial>;
+  expect(ring.material.color.getHexString()).toBe('ff3344');
+  const player = players[0]!;
+  views[0]!.apply({ ...player, respawnRemainingMs: 0 }, { x: 700, y: 400 }, player.facing, null);
+  expect(ring.position.x).toBe(60);
+  expect(ring.visible).toBe(true);
+  views[0]!.apply({ ...player, respawnRemainingMs: 500 }, player.position, player.facing, null);
+  expect(ring.visible).toBe(false);
+  views.forEach(v => v.destroy());
+  expect(scene.children).toHaveLength(0);
 });

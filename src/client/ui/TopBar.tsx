@@ -39,7 +39,7 @@ export function TopBar({ state, onToggleSound, onLeaveRoom, onKickPlayer }: TopB
           <div className="room-management__panel" aria-label="Oyuncu yönetimi">
             <p>Çıkarılan oyuncunun mevcut oturumu kapanır.</p>
             {removable.map(player => <div className="room-management__player" key={player.playerId}>
-              <span>{player.name}{player.role === 'SPECTATOR' ? ' · Seyirci' : ''}</span>
+              <span className="room-management__identity"><span title={player.name}>{player.name}</span>{player.role === 'SPECTATOR' ? <small>Seyirci</small> : null}</span>
               {confirmPlayer === player.playerId ? <span className="room-management__confirm">
                 <button className="chrome-button focus-ring" disabled={state.pendingAction !== null} onClick={() => { void onKickPlayer(player.playerId).then(() => { setConfirmPlayer(null); management.current?.querySelector('summary')?.focus(); }); }}>Çıkarmayı onayla</button>
                 <button className="chrome-button focus-ring" onClick={() => setConfirmPlayer(null)}>Vazgeç</button>

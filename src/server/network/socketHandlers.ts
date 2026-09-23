@@ -351,7 +351,7 @@ export function registerSocketHandlers(options: SocketHandlerOptions): void {
     socket.on('room:create', (payload, callback) => {
       acknowledge(roomCreateSchema, payload, callback, (validated) => {
         if (admitRoomCreation && !admitRoomCreation(socket)) throw new SafeSocketActionError(RATE_LIMITED);
-        return rooms.createRoom(socket.id, validated.name);
+        return rooms.createRoom(socket.id, validated.name, validated.browserId);
       }, establishSession);
     });
     socket.on('room:join', (payload, callback) => {
@@ -359,7 +359,7 @@ export function registerSocketHandlers(options: SocketHandlerOptions): void {
         roomJoinSchema,
         payload,
         callback,
-        (validated) => rooms.joinRoom(socket.id, validated.roomCode, validated.name, validated.role),
+        (validated) => rooms.joinRoom(socket.id, validated.roomCode, validated.name, validated.role, validated.browserId),
         establishSession
       );
     });
