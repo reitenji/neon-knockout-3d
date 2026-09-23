@@ -1195,18 +1195,22 @@ describe('Socket.IO FFA game server flow', () => {
     const hitMarker = eventMarker(match.roomCode);
     await quick(match, [{ client: match.hostClient, playerId: match.host.playerId, aim: { x: 1, y: 0 } }]);
     const hit = advanceToEvent(match, hitMarker, 'HIT', 400, (event) => event.targetId === match.guest.playerId);
-    const beforeDisconnect = snapshot(match.roomCode);
+    // Read the current simulation state, not the last paced snapshot.
+    const beforeDisconnect = server.rooms.currentMatchPublication(match.guestClient.id!)!.snapshot;
     const guestBefore = player(beforeDisconnect, match.guest.playerId);
 
     harness().disconnectPlayer(match.roomCode, match.guest.playerId);
     await waitFor(() => server.rooms.debugRoom(match.roomCode)?.connectedCount === 1, 'authoritative disconnect');
     const resumedClient = await client();
+    const resumedPublication = expectEvent(resumedClient, 'match:started');
     const resumed = await emitSuccess<SessionWelcome>(resumedClient, 'session:resume', {
       roomCode: match.roomCode,
       resumeToken: match.guest.resumeToken
     });
     expect(resumed).toMatchObject({ playerId: match.guest.playerId, resumed: true });
-    const afterResume = snapshot(match.roomCode);
+    // The session boundary captures resume before normal simulation ticks continue.
+    const afterResume = (await resumedPublication).snapshot;
+    expect(afterResume.tick).toBe(beforeDisconnect.tick);
     expect(player(afterResume, match.guest.playerId)).toMatchObject({
       playerId: match.guest.playerId,
       chassis: guestBefore.chassis,
