@@ -487,7 +487,7 @@ export class RoomManager {
     const previous = room.lastChatAt.get(player.playerId);
     if (previous !== undefined && now - previous < 1000) throw new DomainError('RATE_LIMITED', 'Çok hızlı mesaj gönderiyorsun. Biraz bekle.', true);
     room.lastChatAt.set(player.playerId, now);
-    room.chatMessages.push({ id: room.nextChatId++, playerId: player.playerId, name: player.name, text: parsed.data.text, sentAt: now });
+    room.chatMessages.push({ id: room.nextChatId++, playerId: player.playerId, name: player.name, accent: player.accent, text: parsed.data.text, sentAt: now });
     if (room.chatMessages.length > 50) room.chatMessages.shift();
     this.publishRoom(room);
   }

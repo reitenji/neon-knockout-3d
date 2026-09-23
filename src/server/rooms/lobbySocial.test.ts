@@ -16,7 +16,7 @@ describe('lobby chat and host removal', () => {
   it('uses authoritative identity, trims text, bounds history and throttles messages', () => {
     const s = setup();
     s.rooms.sendChat('guest', '  Merhaba  ');
-    expect(s.state().chatMessages).toEqual([{ id: 1, playerId: s.guest.playerId, name: 'Guest', text: 'Merhaba', sentAt: 1000 }]);
+    expect(s.state().chatMessages).toEqual([{ id: 1, playerId: s.guest.playerId, name: 'Guest', accent: 1, text: 'Merhaba', sentAt: 1000 }]);
     expect(() => s.rooms.sendChat('guest', 'again')).toThrow(expect.objectContaining({ code: 'RATE_LIMITED' }));
     expect(() => s.rooms.sendChat('stranger', 'hello')).toThrow();
     s.advance();

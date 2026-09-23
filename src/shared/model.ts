@@ -65,7 +65,7 @@ export type ResultPlayer = Readonly<RoomPlayer & {
   resultStatus: ResultPlayerStatus;
 }>;
 
-export type LobbyChatMessage = Readonly<{ id: number; playerId: string; name: string; text: string; sentAt: number }>;
+export type LobbyChatMessage = Readonly<{ id: number; playerId: string; name: string; accent?: PlayerAccent; text: string; sentAt: number }>;
 
 export type RoomState = Readonly<{
   roomCode: string;
