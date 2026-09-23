@@ -29,7 +29,8 @@ export function createFighterView(
   const burstRadius = FIGHTERS[player.chassis].burstRadius;
   const aura = new THREE.Mesh(new THREE.RingGeometry(34, 39, 48), new THREE.MeshBasicMaterial({ color: accent, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
   aura.name = 'damage-aura'; aura.rotation.x = -Math.PI / 2; aura.visible = false; scene.add(aura);
-  const marker = new THREE.Mesh(new THREE.RingGeometry(local ? 30 : 27, local ? 33 : 29, 40), new THREE.MeshBasicMaterial({ color: accent, transparent: true, opacity: local ? 0.95 : 0.6, depthWrite: false }));
+  const marker = new THREE.Mesh(new THREE.RingGeometry(local ? 30 : 27, local ? 35 : 29, 40), new THREE.MeshBasicMaterial({ color: local ? 0xff3344 : accent, transparent: true, opacity: local ? 1 : 0.6, depthWrite: false }));
+  marker.name = local ? 'local-player-ring' : 'player-marker';
   marker.rotation.x = -Math.PI / 2; scene.add(marker);
   const charge = new THREE.Mesh(new THREE.TorusGeometry(36, 1.5, 5, 48), new THREE.MeshBasicMaterial({ color: 0xf6d743, transparent: true, opacity: 0.85 }));
   const ability = new THREE.Mesh(new THREE.RingGeometry(1, 1.04, 48), new THREE.MeshBasicMaterial({ color: accent, transparent: true, opacity: 0.5, depthWrite: false }));

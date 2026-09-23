@@ -34,6 +34,25 @@ describe('lobby chat and host removal', () => {
     s.rooms.setReady('host', true); s.rooms.setReady('guest', true); s.rooms.startMatch('host');
     expect(() => s.rooms.sendChat('guest', 'hello')).toThrow();
   });
+  it('keeps room chat available in results and preserves history on return to lobby', () => {
+    const s = setup();
+    s.rooms.sendChat('host', 'Başlayalım');
+    s.rooms.setRoomSettings('host', { durationMs: 180000, knockoutTarget: 3 });
+    s.rooms.setReady('host', true); s.rooms.setReady('guest', true); s.rooms.startMatch('host');
+    for (let i = 0; i < 50; i++) s.rooms.advance(250);
+    expect(() => s.rooms.sendChat('guest', 'Oyun sürüyor')).toThrow();
+    for (let score = 0; score < 3; score++) {
+      s.rooms.forceKnockout(s.host.roomCode, s.host.playerId, s.guest.playerId);
+      for (let i = 0; i < 30; i++) s.rooms.advance(250);
+    }
+    expect(s.state().phase).toBe('RESULT');
+    s.rooms.setResultReady('guest', true);
+    s.rooms.sendChat('guest', 'İyi oyundu');
+    expect(s.state().players.find(p => p.playerId === s.guest.playerId)?.ready).toBe(true);
+    expect(s.state().chatMessages.map(m => m.text)).toEqual(['Başlayalım', 'İyi oyundu']);
+    s.rooms.returnToLobby('host');
+    expect(s.state().chatMessages.map(m => m.text)).toEqual(['Başlayalım', 'İyi oyundu']);
+  });
   it('rejects guests, self-removal and targets in another room; revokes kicked sessions', () => {
     const s = setup();
     const other = s.rooms.createRoom('other', 'Other');

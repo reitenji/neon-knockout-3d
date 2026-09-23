@@ -76,6 +76,7 @@ export type RoomPublication =
   | { type: 'ROOM_CLOSED'; roomCode: string; reason?: 'IDLE' };
 
 type RoomPlayer = {
+  browserId: string | null;
   role: PlayerRole;
   botDifficulty: BotDifficulty | null;
   playerId: string;
@@ -251,7 +252,7 @@ export class RoomManager {
     this.roomCreationTimes.length = 0;
   }
 
-  createRoom(connectionId: string, name: string): SessionWelcome {
+  createRoom(connectionId: string, name: string, browserId: string | null = null): SessionWelcome {
     this.assertConnectionAvailable(connectionId);
     const normalizedName = this.normalizeName(name);
     this.assertRoomCreationAvailable();
@@ -259,6 +260,7 @@ export class RoomManager {
     const playerId = bytesToHex(this.deps.randomBytes(16));
     const resumeToken = this.deps.randomBytes(32);
     const player: RoomPlayer = {
+      browserId,
       playerId,
       role: 'FIGHTER',
       botDifficulty: null,
@@ -298,9 +300,15 @@ export class RoomManager {
     return { playerId, roomCode, resumeToken: bytesToHex(resumeToken), resumed: false };
   }
 
-  joinRoom(connectionId: string, roomCode: string, name: string, role: PlayerRole = 'FIGHTER'): SessionWelcome {
+  joinRoom(connectionId: string, roomCode: string, name: string, role: PlayerRole = 'FIGHTER', browserId: string | null = null): SessionWelcome {
     this.assertConnectionAvailable(connectionId);
     const room = this.requireRoom(roomCode);
+    if (browserId) {
+      const existing = [...room.players.values()].find(player => player.browserId === browserId &&
+        (player.connected || (player.expiresAt !== null && player.expiresAt > this.deps.now())));
+      if (existing?.connected) throw new DomainError('BROWSER_ALREADY_IN_ROOM', 'Bu tarayıcı bu odaya zaten katıldı. Açık oyun sekmesine dön.', true);
+      if (existing) return this.resume(connectionId, roomCode, bytesToHex(existing.resumeToken));
+    }
     this.assertRole(role);
     if (role === 'FIGHTER' && (room.phase === 'COUNTDOWN' || room.phase === 'MATCH')) {
       throw new DomainError('MATCH_IN_PROGRESS', 'Maç devam ederken yeni oyuncu katılamaz.', true);
@@ -312,6 +320,7 @@ export class RoomManager {
     const order = room.nextPlayerOrder++;
     room.lastActivityAt = this.deps.now();
     room.players.set(playerId, {
+      browserId,
       playerId,
       role,
       botDifficulty: null,
@@ -397,7 +406,7 @@ export class RoomManager {
     const order = room.nextPlayerOrder++;
     const playerId = `bot-${bytesToHex(this.deps.randomBytes(16))}`;
     room.players.set(playerId, {
-      playerId, name: `Bot ${order + 1}`, chassis, botDifficulty: difficulty, role: 'FIGHTER',
+      playerId, name: `Bot ${order + 1}`, chassis, botDifficulty: difficulty, browserId: null, role: 'FIGHTER',
       accent: this.lowestUnusedAccent(room), ready: true, connected: true, stats: emptyStats(),
       resumeToken: new Uint8Array(), order, expiresAt: null
     });
@@ -471,7 +480,7 @@ export class RoomManager {
 
   sendChat(connectionId: string, text: string): void {
     const { room, player } = this.requireConnectedPlayer(connectionId);
-    if (room.phase !== 'LOBBY') throw new DomainError('INVALID_PHASE', 'Sohbet yalnızca lobide kullanılabilir.', true);
+    if (room.phase !== 'LOBBY' && room.phase !== 'RESULT') throw new DomainError('INVALID_PHASE', 'Sohbet lobi ve maç sonu ekranında kullanılabilir.', true);
     const parsed = lobbyChatSchema.safeParse({ text });
     if (!parsed.success) throw new DomainError('INVALID_PAYLOAD', 'Mesaj 1–240 karakter olmalıdır.', true);
     const now = this.deps.now();

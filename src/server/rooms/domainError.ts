@@ -6,6 +6,7 @@ export type DomainErrorCode =
   | 'INVALID_ROLE'
   | 'SPECTATOR_ACTION'
   | 'ALREADY_IN_ROOM'
+  | 'BROWSER_ALREADY_IN_ROOM'
   | 'INVALID_CHASSIS'
   | 'INVALID_NAME'
   | 'INVALID_PHASE'

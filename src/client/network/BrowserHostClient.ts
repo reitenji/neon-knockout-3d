@@ -1,3 +1,4 @@
+import { browserIdentity } from './browserIdentity.js';
 import type { GameClient, GameClientConnectionState, GameClientEvents } from './GameClient.js';
 import type { Ack, SessionWelcome, MatchSnapshot } from '../../shared/model.js';
 import { HostRuntime, LOCAL_HOST, requestSchema, type HostCommand, type HostEvent } from './browserHost/HostRuntime.js';
@@ -123,8 +124,9 @@ export function createBrowserHostClient():GameClient {
   const join=async(code:string,nameOrToken:string,resume:boolean,role?:'FIGHTER'|'SPECTATOR'):Promise<Ack<SessionWelcome>>=>{
     clear();joiningEvents=[];connection('connecting');
     try {
+      const browserId = await browserIdentity();
       await connectGuest(code);
-      const ack=await command(resume?'resume':'join',resume?{roomCode:code,resumeToken:nameOrToken}:{roomCode:code,name:nameOrToken,role:role??'FIGHTER'});
+      const ack=await command(resume?'resume':'join',resume?{roomCode:code,resumeToken:nameOrToken}:{roomCode:code,name:nameOrToken,role:role??'FIGHTER',browserId});
       if(ack.ok&&ack.data){
         // Let the action acknowledgement establish the new identity after a prior leave.
         const current=generation, session=ack.data;
@@ -146,10 +148,11 @@ export function createBrowserHostClient():GameClient {
     async createRoom(name){
       clear();
       try {
+        const browserId = await browserIdentity();
         for(let attempt=0;attempt<5;attempt++){
           const buffered:HostEvent[]=[];let registered=false;
           runtime=new HostRuntime((id,event)=>{if(id===LOCAL_HOST){if(registered)receive(event);else buffered.push(event);}else {const channel=peers.get(id)?.channel;if(channel){sendPeer(channel,event,event.event==='match:snapshot');if(event.event==='room:kicked')channel.close();}}});
-          const created=runtime.create(name);if(!created.ok)return created;
+          const created=runtime.create(name, browserId);if(!created.ok)return created;
           roomCode=created.data.roomCode;ownerToken=randomToken();
           try{await signal('','POST',undefined,{roomCode,ownerToken});}
           catch(error){if(asError(error)==='ROOM_CODE_TAKEN')continue;throw error;}
