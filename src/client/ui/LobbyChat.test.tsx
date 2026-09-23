@@ -99,3 +99,12 @@ it('keeps the visible message anchored when old messages are trimmed', () => {
   view.rerender(<LobbyChat messages={[...messages.slice(1), { ...message, id: 51 }]} onSend={onSend} disabled={false} />);
   expect(log.scrollTop).toBe(270);
 });
+
+it('uses each sender’s assigned player color for chat names', () => {
+  render(<LobbyChat messages={[
+    { ...message, name: 'Cyan', accent: 0 },
+    { ...message, id: 2, name: 'Orange', accent: 1 }
+  ]} onSend={async () => true} disabled={false} />);
+  expect(screen.getByText('Cyan')).toHaveStyle({ color: '#6EE7F2' });
+  expect(screen.getByText('Orange')).toHaveStyle({ color: '#FF8A5B' });
+});

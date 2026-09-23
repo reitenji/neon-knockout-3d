@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react';
+import { ACCENTS } from '../../shared/constants.js';
 import type { LobbyChatMessage } from '../../shared/model.js';
 
 type Props = Readonly<{
@@ -59,7 +60,7 @@ export function LobbyChat({ messages, onSend, disabled, error, title = 'Lobi soh
     </div>
     <div className="lobby-chat__history focus-ring" ref={history} onScroll={rememberScrollPosition} role="log" aria-label="Oda mesajları" aria-live="polite" tabIndex={0}>
       {messages.length === 0 ? <p className="lobby-chat__empty">Takım arkadaşlarına merhaba de. Son 50 mesaj burada görünür.</p> : messages.map(message => <div key={message.id} data-message-id={message.id} className="lobby-chat__message">
-        <strong className="lobby-chat__sender" title={message.name}>{message.name}</strong>
+        <strong className="lobby-chat__sender" title={message.name} style={message.accent === undefined ? undefined : { color: ACCENTS[message.accent] }}>{message.name}</strong>
         <time dateTime={new Date(message.sentAt).toISOString()} title={`${messageDate.format(message.sentAt)} · Yerel saat`}>{messageTime.format(message.sentAt)}</time>
         <span className="lobby-chat__text">{message.text}</span>
       </div>)}
