@@ -223,7 +223,7 @@ describe('RoomManager FFA lifecycle', () => {
     });
   });
 
-  it('clamps view ticks with neutral, trusted-network, untrusted WebRTC, history, and future bounds', () => {
+  it('keeps admitted view ticks within fixed history and future bounds despite network samples', () => {
     const subject = fixture();
     const { roomCode, players } = readyAndStart(subject);
     const hostId = players[0].playerId;
@@ -237,7 +237,7 @@ describe('RoomManager FFA lifecycle', () => {
     subject.manager.setPing('c-1', 110, 'polling', subject.clock.now());
     subject.manager.applyInput('c-1', { ...idleInput(1), viewTick: 0 });
     subject.manager.advance(17);
-    expect(subject.manager.debugRoom(roomCode)?.playerViewTicks?.[hostId]).toBe(172);
+    expect(subject.manager.debugRoom(roomCode)?.playerViewTicks?.[hostId]).toBe(177);
 
     subject.manager.setTransport('c-1', 'webrtc');
     subject.manager.setWebRtcNetworkSample('c-1', 300, 0, subject.clock.now());

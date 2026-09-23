@@ -562,19 +562,12 @@ export class RoomManager {
     const queued = room.inputs.get(player.playerId);
     const processed = room.match.players[player.playerId]?.lastProcessedInputSeq ?? -1;
     if (input.seq <= Math.max(queued?.seq ?? -1, processed)) return;
-    const runtime = room.network.get(player.playerId) ?? createNetworkRuntime();
-    const status = networkStatus(runtime, this.deps.now());
     const boundedInput = {
       ...input,
       viewTick: clampClaimedViewTick({
         currentTick: room.match.tick,
         claimedViewTick: input.viewTick,
-        medianRttMs: status.medianMs,
-        jitterMs: status.jitterMs,
-        historyOldestTick: room.combatHistory?.oldestTick() ?? null,
-        // A WebRTC peer controls when it answers probes, so its RTT cannot
-        // safely authorize a larger rollback window.
-        trustedNetworkTelemetry: runtime.transport !== 'webrtc'
+        historyOldestTick: room.combatHistory?.oldestTick() ?? null
       })
     };
     const unprocessed = queued && queued.seq > processed ? queued : null;
