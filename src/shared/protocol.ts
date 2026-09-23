@@ -46,6 +46,8 @@ const roomCodeSchema = z.string().transform((value, context) => {
 
 export const roomCreateSchema = z.object({ name: z.string() }).strict();
 export const roomJoinSchema = z.object({ name: z.string(), roomCode: roomCodeSchema, role: roleSchema.default('FIGHTER') }).strict();
+export const lobbyChatSchema = z.object({ text: z.string().trim().min(1).max(240) }).strict();
+export const roomKickSchema = z.object({ playerId: z.string().min(1) }).strict();
 export const roomLeaveSchema = emptyPayloadSchema;
 export const sessionResumeSchema = z.object({ roomCode: roomCodeSchema, resumeToken: z.string() }).strict();
 export const lobbyChassisSchema = z.object({ chassis: chassisSchema }).strict();
@@ -81,6 +83,8 @@ export type NetworkProbe = Readonly<{ nonce: number }>;
 export type NetworkProbeAcknowledgement = Readonly<{ nonce: number }>;
 
 export interface ClientToServerEvents {
+  'lobby:chat': (payload: z.infer<typeof lobbyChatSchema>, acknowledge: (ack: Ack<null>) => void) => void;
+  'room:kick': (payload: z.infer<typeof roomKickSchema>, acknowledge: (ack: Ack<null>) => void) => void;
   'room:create': (payload: RoomCreatePayload, acknowledge: (ack: Ack<SessionWelcome>) => void) => void;
   'room:join': (payload: RoomJoinPayload, acknowledge: (ack: Ack<SessionWelcome>) => void) => void;
   'room:leave': (payload: RoomLeavePayload, acknowledge: (ack: Ack<null>) => void) => void;
@@ -108,6 +112,7 @@ export interface ClientToServerEvents {
 }
 
 export interface ServerToClientEvents {
+  'room:kicked': (notice: Readonly<{ roomCode: string }>) => void;
   'session:welcome': (welcome: SessionWelcome) => void;
   'room:state': (state: RoomState) => void;
   'transport:mode': (notice: TransportModeNotice) => void;

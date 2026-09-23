@@ -19,6 +19,7 @@ export function createBrowserHostClient():GameClient {
   const emit=<E extends keyof GameClientEvents>(event:E,value:Parameters<GameClientEvents[E]>[0])=>{for(const listener of listeners.get(event)??[])listener(value as never);};
   const connection=(next:GameClientConnectionState)=>{state=next;emit('connection',next);};
   const receive=(event:HostEvent)=>{
+    if(event.event==='room:kicked') { clear(); emit('room:kicked',event.data as {roomCode:string}); connection('connected'); return; }
     if(event.event==='network:probe') {
       if(guestChannel)sendPeer(guestChannel,{id:0,command:'pong',payload:event.data});
       return;
@@ -97,7 +98,7 @@ export function createBrowserHostClient():GameClient {
         const packet=JSON.parse(message.data) as {id?:number;ack?:Ack<SessionWelcome|null>;event?:HostEvent['event'];data?:unknown};
         if(packet.id!==undefined&&packet.ack){const request=pending.get(packet.id);if(request){window.clearTimeout(request.timer);pending.delete(packet.id);request.resolve(packet.ack);}}
         else if(packet.event==='network:probe')receive({event:packet.event,data:packet.data});
-        else if(packet.event&&['room:state','match:started','match:snapshot','match:event','server:error'].includes(packet.event)) {
+        else if(packet.event&&['room:kicked','room:state','match:started','match:snapshot','match:event','server:error'].includes(packet.event)) {
           const event={event:packet.event,data:packet.data};
           if(joiningEvents) {if(joiningEvents.length<64)joiningEvents.push(event);} else receive(event);
         }
@@ -147,7 +148,7 @@ export function createBrowserHostClient():GameClient {
       try {
         for(let attempt=0;attempt<5;attempt++){
           const buffered:HostEvent[]=[];let registered=false;
-          runtime=new HostRuntime((id,event)=>{if(id===LOCAL_HOST){if(registered)receive(event);else buffered.push(event);}else {const channel=peers.get(id)?.channel;if(channel)sendPeer(channel,event,event.event==='match:snapshot');}});
+          runtime=new HostRuntime((id,event)=>{if(id===LOCAL_HOST){if(registered)receive(event);else buffered.push(event);}else {const channel=peers.get(id)?.channel;if(channel){sendPeer(channel,event,event.event==='match:snapshot');if(event.event==='room:kicked')channel.close();}}});
           const created=runtime.create(name);if(!created.ok)return created;
           roomCode=created.data.roomCode;ownerToken=randomToken();
           try{await signal('','POST',undefined,{roomCode,ownerToken});}
@@ -166,6 +167,7 @@ export function createBrowserHostClient():GameClient {
     },
     joinRoom(name,code,role){return join(code,name,false,role);},
     resumeSession(code,token){return join(code,token,true);},
+    sendChat:text=>action('chat',{text}),kickPlayer:playerId=>action('kick',{playerId}),
     setRole:role=>action('role',{role}),addBot:(chassis,difficulty)=>action('addBot',{chassis,difficulty}),
     updateBot:(playerId,chassis,difficulty)=>action('updateBot',{playerId,chassis,difficulty}),removeBot:playerId=>action('removeBot',{playerId}),
     setChassis:chassis=>action('chassis',{chassis}),setReady:ready=>action('ready',{ready}),setRoomSettings:settings=>action('settings',settings),

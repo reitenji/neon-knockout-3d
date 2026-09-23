@@ -1303,3 +1303,32 @@
     min-height: 0;
   }
 }
+
+/* Room social controls share the existing compact lobby chrome. */
+.lobby-chat { border-top: 1px solid var(--color-border); padding-top: var(--space-4); min-width: 0; }
+.lobby-chat__heading { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); }
+.lobby-chat h2 { font-size: 14px; margin: 0; }
+.lobby-chat__history { height: 160px; overflow: auto; overscroll-behavior: contain; overflow-anchor: none; margin: 12px 0; padding: 12px; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+.lobby-chat__empty, .lobby-chat small { color: var(--color-text-muted); font-size: 12px; }
+.lobby-chat__message { display: grid; gap: 4px; margin: 0 0 12px; font-size: 13px; overflow-wrap: anywhere; white-space: pre-wrap; }
+.lobby-chat__message strong { color: var(--color-cyan); font-size: 12px; }
+.lobby-chat__form { display: grid; gap: 8px; font-size: 13px; }
+.lobby-chat__compose { display: flex; gap: 8px; }
+.lobby-chat__compose input { flex: 1; width: 0; min-width: 0; padding: 10px; background: var(--color-bg); color: var(--color-text); border: 1px solid var(--color-border-strong); border-radius: var(--radius-sm); }
+.room-management { position: relative; }
+.room-management summary { cursor: pointer; }
+.room-management__panel { position: absolute; z-index: 30; right: 0; top: calc(100% + 8px); width: min(360px, calc(100vw - 24px)); max-height: 60dvh; overflow: auto; padding: 14px; border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); background: var(--color-surface); box-shadow: 0 12px 40px #0008; }
+.room-management__panel p { font-size: 12px; color: var(--color-text-muted); }
+.room-management__player { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--color-border); font-size: 13px; overflow-wrap: anywhere; }
+.room-management__confirm { display: grid; gap: 6px; }
+@media (max-width: 600px) {
+  .room-management { position: static; }
+  .room-management__panel { position: fixed; top: 70px; right: 12px; }
+}
+@media (max-width: 760px) {
+  .room-management summary { min-height: 36px; padding-inline: 8px; font-size: 0.66rem; }
+}
+@media (pointer: coarse) and (orientation: landscape) {
+  .app-shell--match > .top-bar { display: block; position: fixed; z-index: 15; top: 8px; right: 8px; width: auto; min-height: 0; padding: 0; border: 0; background: transparent; }
+  .app-shell--match > .top-bar::after, .app-shell--match > .top-bar > :not(.top-bar__controls), .app-shell--match .top-bar__controls > :not(.room-management) { display: none; }
+}

@@ -77,7 +77,7 @@ export function App({ store, gameFactory }: AppProps) {
 
   return (
     <div className={`app-shell${state.screen === 'MATCH' ? ' app-shell--match' : ''}${spectator ? ' app-shell--spectator' : ''}`}>
-      <TopBar state={state} onToggleSound={store.actions.toggleSound} onLeaveRoom={leaveRoom} />
+      <TopBar state={state} onToggleSound={store.actions.toggleSound} onLeaveRoom={leaveRoom} onKickPlayer={store.actions.kickPlayer} />
 
       <main className="app-main">
         {state.screen === 'LANDING' ? (
@@ -96,6 +96,7 @@ export function App({ store, gameFactory }: AppProps) {
             onSetRole={store.actions.setRole}
             onAddBot={store.actions.addBot}
             onUpdateBot={store.actions.updateBot}
+            onSendChat={store.actions.sendChat}
             onRemoveBot={store.actions.removeBot}
             onSetChassis={store.actions.setChassis}
             onToggleReady={store.actions.setReady}

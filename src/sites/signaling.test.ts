@@ -64,3 +64,15 @@ it('preserves unexpired signaling leases when adding source quotas', () => {
     expect(sqlite.prepare('SELECT code FROM peer_rooms').get()?.code).toBe('ABCD');
   } finally { sqlite.close(); }
 });
+
+it('serves invite HTML without triggering asset canonical redirects that discard the room code', async () => {
+  const ASSETS = { fetch: async (request: Request) => new URL(request.url).pathname === '/'
+    ? new Response('<html>game</html>', { headers: { 'Content-Type': 'text/html' } })
+    : Response.redirect('https://example.test/', 307) };
+  for (const path of ['/room/ABCD', '/room/abcd/']) {
+    const response = await signalFetch(new Request(`https://example.test${path}`), { ASSETS } as Parameters<typeof signalFetch>[1]);
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Location')).toBeNull();
+    expect(await response.text()).toContain('game');
+  }
+});

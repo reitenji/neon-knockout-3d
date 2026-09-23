@@ -33,7 +33,7 @@ export async function signalFetch(request: Request, env: SignalEnv): Promise<Res
   if(!url.pathname.startsWith(base)) {
     if(url.pathname==='/health') return json({ok:true,mode:'browser-host'});
     if(url.pathname==='/api/lan-addresses') return json({addresses:[]});
-    if(env.ASSETS) return env.ASSETS.fetch(/^\/room\/[A-Z0-9]{4}\/?$/.test(url.pathname) ? new Request(new URL('/index.html',url),request) : request);
+    if(env.ASSETS) return env.ASSETS.fetch(/^\/room\/[A-Z0-9]{4}\/?$/i.test(url.pathname) ? new Request(new URL('/',url),request) : request);
     return json({error:'NOT_FOUND'},404);
   }
   try {

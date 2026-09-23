@@ -17,7 +17,7 @@ function player(overrides: Partial<RoomPlayer> = {}): RoomPlayer {
 }
 function room(overrides: Partial<RoomState> = {}): RoomState {
   return {
-    roomCode: 'AB2Z', phase: 'LOBBY', hostPlayerId: 'player-1', pauseRemainingMs: null, result: null,
+    roomCode: 'AB2Z', phase: 'LOBBY', hostPlayerId: 'player-1', pauseRemainingMs: null, chatMessages: [], result: null,
     settings: DEFAULT_ROOM_SETTINGS,
     players: [player(), player({ role: 'FIGHTER', botDifficulty: null, playerId: 'player-2', name: 'Linus', chassis: 'BASTION', accent: 1, ready: true })],
     ...overrides
@@ -38,6 +38,7 @@ function renderLobby(clientState = state(), handlers: Partial<Parameters<typeof 
     onSetRole: vi.fn(async () => undefined),
     onAddBot: vi.fn(async () => undefined),
     onUpdateBot: vi.fn(async () => undefined),
+    onSendChat: vi.fn(async () => true),
     onRemoveBot: vi.fn(async () => undefined),
     onSetChassis: vi.fn(async () => undefined),
     onToggleReady: vi.fn(async () => undefined),
