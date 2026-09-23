@@ -14,6 +14,8 @@ export type DomainErrorCode =
   | 'NOT_HOST'
   | 'NOT_READY'
   | 'PLAYER_NOT_FOUND'
+  | 'RATE_LIMITED'
+  | 'SERVER_CAPACITY'
   | 'ROOM_FULL'
   | 'ROOM_NOT_FOUND';
 

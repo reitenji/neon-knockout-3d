@@ -13,7 +13,7 @@ type SocketRttSamplerOptions = Readonly<{
 }>;
 
 const SAMPLE_INTERVAL_MS = 1_000;
-const PROBE_TIMEOUT_MS = 2_000;
+export const PROBE_TIMEOUT_MS = 2_000;
 
 export class SocketRttSampler {
   private active = false;
