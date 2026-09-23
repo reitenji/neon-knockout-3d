@@ -84,3 +84,43 @@ it.each(['LOBBY', 'MATCH'] as const)('synchronizes a new guest directly into %s 
   await vi.waitFor(() => expect(game.getSnapshot().screen).toBe('LOBBY'));
   client.disconnect();
 });
+
+
+it('closes the guest transport on pagehide while preserving its resumable seat', async () => {
+  let onmessage: ((message: {data: string}) => void) | null = null;
+  const host = new HostRuntime((connection, event) => {
+    if (connection === 'peer') onmessage?.({data: JSON.stringify(event)});
+  });
+  const created = host.create('Owner');
+  if (!created.ok) throw new Error('create failed');
+  vi.stubGlobal('RTCPeerConnection', class {
+    createDataChannel() {
+      return {
+        readyState: 'open', bufferedAmount: 0,
+        set onmessage(callback: typeof onmessage) { onmessage = callback; },
+        send(data: string) {
+          const request = JSON.parse(data) as {id: number; command: HostCommand; payload: unknown};
+          const ack = host.handle('peer', request.command, request.payload);
+          onmessage?.({data: JSON.stringify({id: request.id, ack})});
+        }
+      };
+    }
+    async setRemoteDescription() {}
+    close() { host.disconnect('peer'); }
+  });
+  const client = createBrowserHostClient();
+  try {
+    client.connect();
+    const joined = await client.joinRoom('Guest', created.data.roomCode);
+    if (!joined.ok) throw new Error('join failed');
+    // Merely switching tabs must not disconnect a player.
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(host.rooms.debugRoom(created.data.roomCode)).toMatchObject({connectedCount: 2});
+    window.dispatchEvent(new Event('pagehide'));
+    expect(client.getConnectionState()).toBe('disconnected');
+    expect(host.rooms.debugRoom(created.data.roomCode)).toMatchObject({connectedCount: 1, reservedCount: 1});
+    window.dispatchEvent(new PageTransitionEvent('pageshow', {persisted: true}));
+    expect(client.getConnectionState()).toBe('connected');
+    expect(await client.resumeSession(created.data.roomCode, joined.data.resumeToken)).toMatchObject({ok: true, data: {playerId: joined.data.playerId}});
+  } finally {client.disconnect();}
+});
